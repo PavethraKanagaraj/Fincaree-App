@@ -3,8 +3,8 @@ import type { NextRequest } from "next/server";
 
 /* ============================================================
    App split — one codebase, two deployments.
-   APP_MODE=b2b  → only B2B routes are served
-   APP_MODE=b2c  → only B2C routes are served
+   APP_TYPE=b2b  → only B2B routes are served
+   APP_TYPE=b2c  → only B2C routes are served
    unset         → everything is served (local development)
    ============================================================ */
 
@@ -30,7 +30,7 @@ const matches = (pathname: string, routes: string[]) =>
   routes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
 export function proxy(request: NextRequest) {
-  const mode = process.env.APP_MODE;
+  const mode = process.env.APP_TYPE;
   if (mode !== "b2b" && mode !== "b2c") return NextResponse.next();
 
   const { pathname } = request.nextUrl;
