@@ -1,0 +1,470 @@
+# Snapshot of Figma collection "7.Components" (VariableCollectionId:9846:13378)
+# File: E3iIKwdE2far5TdrPYla2z   Exported: 2026-09-06
+# 456 variables.
+#
+# Format:  <variable name> \t <Light Mode> [\t <Dark Mode>]
+#   The Dark column is omitted when it is identical to Light.
+#   S:<name>  = alias into "1.Semantic color modes"
+#   P:<name>  = alias into "x_Primitives"   <- violates the semantic-layer rule
+#   !<id>     = BROKEN alias (target does not resolve)
+#   #rrggbb   = raw literal value
+#
+# NOTE: taken AFTER the Button/Button Group rewire (117 variables moved from
+# primitive aliases to semantic aliases). For a pre-change rollback use Figma
+# version history. Light-mode values were verified unchanged by that rewire.
+Avatar/AddButton/Background/Default	S:Background/Default/Primary
+Avatar/AddButton/Background/Disabled	S:Background/Default/Disabled
+Avatar/AddButton/Background/Hover	S:Background/Default/Secondary
+Avatar/AddButton/Border/Default	S:Border/Default/Secondary
+Avatar/AddButton/Border/Disabled	S:Border/Default/Disabled
+Avatar/AddButton/Cursor/Fill	S:Background/Default/Primary
+Avatar/AddButton/Cursor/Outline	S:Foreground/Default/Primary
+Avatar/AddButton/Cursor/Shadow	P:Colors/Overlay/Black/Black 30%
+Avatar/AddButton/Focus/Background	S:Background/Default/Primary
+Avatar/AddButton/Focus/Ring	S:Border/Focus Ring/Primary
+Avatar/AddButton/Icon/Disabled	S:Foreground/Default/Disabled
+Avatar/AddButton/Icon/Hover	S:Icon/Default/Secondary
+Avatar/AddButton/Tooltip/Background	S:Background/Inverse/Primary
+Avatar/AddButton/Tooltip/Shadow/1	P:Colors/Overlay/Black/Black 12%
+Avatar/AddButton/Tooltip/Shadow/2	P:Colors/Overlay/Black/Black 8%
+Avatar/AddButton/Tooltip/Shadow/3	P:Colors/Overlay/Black/Black 4%
+Avatar/AddButton/Tooltip/Text	S:Text/Inverse/Primary
+Avatar/Background/Default	S:Background/Default/Tertiary
+Avatar/Badge/Background	S:Background/Default/Primary
+Avatar/Border/Default	S:Border/Default/Secondary
+Avatar/Image/Border	P:Colors/Overlay/Black/Black 8%
+Avatar/Interactive/Background	S:Background/Default/Tertiary
+Avatar/Interactive/Border	S:Border/Default/Secondary
+Avatar/Interactive/Focus/Ring	S:Border/Focus Ring/Primary
+Avatar/Interactive/Overlay/Active	P:Colors/Overlay/Black/Black 20%
+Avatar/Interactive/Overlay/Hover	P:Colors/Overlay/Black/Black 8%
+Avatar/Interactive/Silhouette	S:Icon/Default/Placeholder
+Avatar/Text/Initials	S:Text/Default/Quaternary
+Badge/Error/Background	P:Colors/Primary/Error/50
+Badge/Error/Border	P:Colors/Primary/Error/100
+Badge/Error/Dot	P:Colors/Primary/Error/500
+Badge/Error/Text	P:Colors/Primary/Error/700
+Badge/Info/Background	P:Colors/Secondary/Blue/25
+Badge/Info/Border	P:Colors/Secondary/Blue/100
+Badge/Info/Dot	P:Colors/Primary/Info/500
+Badge/Info/Text	P:Colors/Primary/Info/600
+Badge/Neutral/Background	P:Colors/Primary/Grey/25
+Badge/Neutral/Border	P:Colors/Primary/Grey/100
+Badge/Neutral/Dot	P:Colors/Primary/Grey/400
+Badge/Neutral/Text	P:Colors/Primary/Grey/700
+Badge/Primary/Background	P:Colors/Primary/Brand/25
+Badge/Primary/Border	P:Colors/Primary/Brand/100
+Badge/Primary/Dot	P:Colors/Primary/Brand/500
+Badge/Primary/Text	P:Colors/Primary/Brand/600
+Badge/Purple/Background	P:Colors/Secondary/Purple/50
+Badge/Purple/Border	P:Colors/Secondary/Purple/200
+Badge/Purple/Dot	P:Colors/Secondary/Purple/400
+Badge/Purple/Text	P:Colors/Secondary/500
+Badge/Success/Background	P:Colors/Primary/Success/25
+Badge/Success/Border	P:Colors/Primary/Success/100
+Badge/Success/Dot	P:Colors/Primary/Success/500
+Badge/Success/Text	P:Colors/Primary/Success/700
+Badge/Warning/Background	P:Colors/Primary/Warning/25
+Badge/Warning/Border	P:Colors/Primary/Warning/200
+Badge/Warning/Dot	P:Colors/Primary/Warning/500
+Badge/Warning/Text	P:Colors/Primary/Warning/700
+Button Group/Background/Default	S:Background/Default/Primary
+Button Group/Background/Disabled	S:Background/Default/Disabled
+Button Group/Background/Hover	S:Background/Default/Secondary
+Button Group/Background/Selected	S:Background/Brand/Subtle
+Button Group/Background/Selected Hover	S:Background/Brand/Subtle Hover
+Button Group/Border/Default	S:Border/Default/Secondary
+Button Group/Border/Disabled	S:Border/Default/Disabled
+Button Group/Border/Hover	!VariableID:10321:7793
+Button Group/Border/Selected	S:Border/Brand/Primary
+Button Group/Icon/Default	S:Icon/Default/Secondary
+Button Group/Icon/Disabled	S:Icon/Default/Disabled
+Button Group/Icon/Hover	S:Icon/Default/Primary
+Button Group/Icon/Selected	S:Icon/Brand/Primary
+Button Group/Text/Default	S:Text/Default/Secondary
+Button Group/Text/Disabled	S:Text/Default/Disabled
+Button Group/Text/Hover	S:Text/Default/Primary
+Button Group/Text/Selected	S:Text/Brand/Primary
+Button/Brand/Link Brand/Focus Ring/Border/Primary	S:Focus Ring/Border/Primary
+Button/Brand/Link Brand/Focus Ring/Halo/Primary	S:Focus Ring/Halo/Primary
+Button/Brand/Link Brand/Icon/Default	S:Icon/Brand/Primary
+Button/Brand/Link Brand/Icon/Disabled	S:Icon/Default/Disabled
+Button/Brand/Link Brand/Icon/Focus	S:Icon/Brand/Primary
+Button/Brand/Link Brand/Icon/Hover	S:Icon/Brand/Secondary
+Button/Brand/Link Brand/Link/Default	S:Text/Brand/Primary
+Button/Brand/Link Brand/Link/Disabled	S:Text/Default/Disabled
+Button/Brand/Link Brand/Link/Focus	S:Border/Focus Ring/Primary
+Button/Brand/Link Brand/Link/Hover	S:Text/Brand/Tertiary Hover
+Button/Brand/Link Brand/Link/Loading	S:Text/Brand/Primary
+Button/Brand/Link Brand/Spinner/Spinner	S:Icon/Brand/Primary
+Button/Brand/Link Grey/Focus Ring/Border/Primary	S:Focus Ring/Border/Primary
+Button/Brand/Link Grey/Focus Ring/Halo/Primary	S:Focus Ring/Halo/Primary
+Button/Brand/Link Grey/Icon/Default	S:Icon/Default/Secondary
+Button/Brand/Link Grey/Icon/Disabled	S:Icon/Default/Disabled
+Button/Brand/Link Grey/Icon/Focused	S:Icon/Default/Secondary
+Button/Brand/Link Grey/Icon/Hover	S:Icon/Default/Primary
+Button/Brand/Link Grey/Spinner/Spinner	S:Icon/Default/Secondary
+Button/Brand/Link Grey/Text/Default	S:Text/Default/Secondary
+Button/Brand/Link Grey/Text/Disabled	S:Text/Default/Disabled
+Button/Brand/Link Grey/Text/Focused	S:Text/Default/Secondary
+Button/Brand/Link Grey/Text/Hover	S:Text/Default/Primary
+Button/Brand/Link Grey/Text/Loading	S:Text/Default/Secondary
+Button/Brand/Primary/Background/Default	S:Background/Brand/Primary
+Button/Brand/Primary/Background/Disabled	S:Background/Default/Disabled
+Button/Brand/Primary/Background/Focus	S:Background/Brand/Primary
+Button/Brand/Primary/Background/Hover	S:Background/Brand/Hover
+Button/Brand/Primary/Background/Loading	S:Background/Brand/Primary
+Button/Brand/Primary/Focus Ring/Border/Primary	S:Focus Ring/Border/Primary
+Button/Brand/Primary/Focus Ring/Halo/Primary	S:Focus Ring/Halo/Primary
+Button/Brand/Primary/Icon/Default	S:Icon/On Brand/Primary
+Button/Brand/Primary/Icon/Disabled	S:Icon/Default/Disabled
+Button/Brand/Primary/Icon/Focus	S:Icon/On Brand/Primary
+Button/Brand/Primary/Icon/Hover	S:Icon/On Brand/Primary
+Button/Brand/Primary/Spinner/Default	S:Foreground/On/Brand
+Button/Brand/Primary/Text/Default	S:Text/On Brand/Primary
+Button/Brand/Primary/Text/Disabled	S:Text/Default/Disabled
+Button/Brand/Primary/Text/Focus	S:Text/On Brand/Primary
+Button/Brand/Primary/Text/Hover	S:Text/On Brand/Primary
+Button/Brand/Primary/Text/Loading	S:Text/On Brand/Primary
+Button/Brand/Secondary/Background/Default	S:Background/Default/Primary
+Button/Brand/Secondary/Background/Disabled	S:Background/Default/Canvas
+Button/Brand/Secondary/Background/Focus	S:Background/Default/Primary
+Button/Brand/Secondary/Background/Hover	S:Background/Default/Canvas
+Button/Brand/Secondary/Background/Loading	S:Background/Default/Canvas
+Button/Brand/Secondary/Border/Default	S:Border/Default/Secondary
+Button/Brand/Secondary/Border/Disabled	S:Border/Default/Tertiary
+Button/Brand/Secondary/Border/Focus	S:Border/Default/Secondary
+Button/Brand/Secondary/Border/Hover	S:Border/Default/Secondary
+Button/Brand/Secondary/Border/Loading	P:Colors/Primary/Grey/300
+Button/Brand/Secondary/Focus Ring/Border/Primary	S:Focus Ring/Border/Primary
+Button/Brand/Secondary/Focus Ring/Halo/Primary	S:Focus Ring/Halo/Primary
+Button/Brand/Secondary/Icon/Default	S:Icon/Default/Tertiary
+Button/Brand/Secondary/Icon/Disabled	S:Icon/Default/Disabled
+Button/Brand/Secondary/Icon/Focus	S:Icon/Default/Tertiary
+Button/Brand/Secondary/Icon/Hover	S:Icon/Default/Secondary
+Button/Brand/Secondary/Spinner/Loading	S:Icon/Default/Secondary
+Button/Brand/Secondary/Text/Default	S:Text/Default/Muted
+Button/Brand/Secondary/Text/Disabled	S:Text/Default/Disabled
+Button/Brand/Secondary/Text/Focus	S:Text/Default/Muted
+Button/Brand/Secondary/Text/Hover	S:Text/Default/Tertiary Hover
+Button/Brand/Secondary/Text/Loading	S:Text/Default/Muted
+Button/Brand/Tertiary/Background/Default	S:Background/Default/Primary
+Button/Brand/Tertiary/Background/Disabled	S:Background/Default/Primary
+Button/Brand/Tertiary/Background/Focus	S:Background/Default/Canvas
+Button/Brand/Tertiary/Background/Hover	S:Background/Default/Canvas
+Button/Brand/Tertiary/Background/Loading	S:Background/Default/Canvas
+Button/Brand/Tertiary/Focus Ring/Border/Primary	S:Focus Ring/Border/Primary
+Button/Brand/Tertiary/Focus Ring/Halo/Primary	S:Focus Ring/Halo/Primary
+Button/Brand/Tertiary/Icon/Default	S:Icon/Default/Tertiary
+Button/Brand/Tertiary/Icon/Disabled	S:Icon/Default/Disabled
+Button/Brand/Tertiary/Icon/Focus	S:Icon/Default/Tertiary
+Button/Brand/Tertiary/Icon/Hover	P:Colors/Primary/Grey/800
+Button/Brand/Tertiary/Spinner/Default	S:Icon/Default/Secondary
+Button/Brand/Tertiary/Text/Default	S:Text/Default/Muted
+Button/Brand/Tertiary/Text/Disabled	S:Text/Default/Disabled
+Button/Brand/Tertiary/Text/Focus	S:Text/Default/Muted
+Button/Brand/Tertiary/Text/Hover	S:Text/Default/Primary Hover
+Button/Brand/Tertiary/Text/Loading	S:Text/Default/Muted
+Button/Destructive/Link Destructive/Background/Default	S:Background/Default/Primary
+Button/Destructive/Link Destructive/Background/Disabled	S:Background/Default/Primary
+Button/Destructive/Link Destructive/Background/Focus	S:Background/Default/Primary
+Button/Destructive/Link Destructive/Background/Hover	S:Background/Default/Primary
+Button/Destructive/Link Destructive/Background/Loading	S:Background/Default/Primary
+Button/Destructive/Link Destructive/Background/pressed	S:Background/Default/Tertiary
+Button/Destructive/Link Destructive/Border/All states	S:Border/Focus Ring/Inverse/Primary
+Button/Destructive/Link Destructive/Focus Ring/Border/Error	S:Focus Ring/Border/Error
+Button/Destructive/Link Destructive/Focus Ring/Halo/Error	S:Focus Ring/Halo/Error
+Button/Destructive/Link Destructive/Icon/Default	S:Icon/Status/Error
+Button/Destructive/Link Destructive/Icon/Disabled	S:Icon/Default/Disabled
+Button/Destructive/Link Destructive/Icon/Hover	P:Colors/Primary/Error/600
+Button/Destructive/Link Destructive/Icon/Loading	S:Icon/Status/Error
+Button/Destructive/Link Destructive/Icon/Pressed	P:Colors/Primary/Error/700
+Button/Destructive/Link Destructive/Link Text/Default	S:Foreground/Status/Error
+Button/Destructive/Link Destructive/Link Text/Disabled	S:Text/Default/Disabled
+Button/Destructive/Link Destructive/Link Text/Focus	S:Border/Focus Ring/Error
+Button/Destructive/Link Destructive/Link Text/Hover	S:Background/Status/Error Solid Hover
+Button/Destructive/Link Destructive/Link Text/Loading	S:Foreground/Status/Error
+Button/Destructive/Link Destructive/Link Text/Pressed	S:Text/Status/Error Strong
+Button/Destructive/Link Destructive/Spinner/Loading	S:Icon/Status/Error
+Button/Destructive/Primary/Background/Default	S:Background/Status/Error Solid
+Button/Destructive/Primary/Background/Disabled	S:Background/Default/Disabled
+Button/Destructive/Primary/Background/Focus	S:Background/Status/Error Solid
+Button/Destructive/Primary/Background/Hover	S:Background/Status/Error Solid Hover
+Button/Destructive/Primary/Background/Loading	S:Background/Status/Error Solid
+Button/Destructive/Primary/Background/Pressed	P:Colors/Primary/Error/700
+Button/Destructive/Primary/Focus Ring/Border/Error	S:Focus Ring/Border/Error
+Button/Destructive/Primary/Focus Ring/Halo/Error	S:Focus Ring/Halo/Error
+Button/Destructive/Primary/Label(foreground)/Default	S:Text/On Brand/Primary
+Button/Destructive/Primary/Label(foreground)/Disabled	S:Text/Default/Disabled
+Button/Destructive/Primary/Label(foreground)/Focus	S:Text/On Brand/Primary
+Button/Destructive/Primary/Label(foreground)/Hover	S:Text/On Brand/Primary
+Button/Destructive/Primary/Label(foreground)/Pressed	S:Text/On Brand/Primary
+Button/Destructive/Primary/Spinner/Loading	S:Icon/On Status/Error
+Button/Destructive/Secondary/Background/Default	S:Background/Default/Primary
+Button/Destructive/Secondary/Background/Disabled	S:Background/Default/Primary
+Button/Destructive/Secondary/Background/Focus	S:Background/Default/Primary
+Button/Destructive/Secondary/Background/Hover	S:Background/Status/Error/Subtle
+Button/Destructive/Secondary/Background/Loading	S:Background/Status/Error/Subtle
+Button/Destructive/Secondary/Background/Pressed	P:Colors/Primary/Error/900
+Button/Destructive/Secondary/Border/Default	S:Border/Status/Error
+Button/Destructive/Secondary/Border/Disabled	S:Border/Default/Disabled
+Button/Destructive/Secondary/Border/Focus	S:Border/Focus Ring/Error
+Button/Destructive/Secondary/Border/Hover	P:Colors/Primary/Error/600
+Button/Destructive/Secondary/Border/Loading	S:Border/Status/Error
+Button/Destructive/Secondary/Focus Ring/Border/Error	S:Focus Ring/Border/Error
+Button/Destructive/Secondary/Focus Ring/Halo/Error	S:Focus Ring/Halo/Error
+Button/Destructive/Secondary/Icon/Default	S:Icon/Status/Error
+Button/Destructive/Secondary/Icon/Disabled	S:Icon/Default/Disabled
+Button/Destructive/Secondary/Icon/Focus	S:Icon/Status/Error
+Button/Destructive/Secondary/Icon/Hover	P:Colors/Primary/Error/600
+Button/Destructive/Secondary/Spinner/Error	S:Icon/Status/Error
+Button/Destructive/Secondary/Text/Default	P:Colors/Primary/Error/500
+Button/Destructive/Secondary/Text/Disabled	S:Text/Default/Disabled
+Button/Destructive/Secondary/Text/Focus	P:Colors/Primary/Error/500
+Button/Destructive/Secondary/Text/Hover	S:Text/Status/Error
+Button/Destructive/Secondary/Text/Loading	P:Colors/Primary/Error/500
+Button/Destructive/Tertiary/Background/Default	S:Background/Default/Primary
+Button/Destructive/Tertiary/Background/Disabled	S:Background/Default/Primary
+Button/Destructive/Tertiary/Background/Focus	S:Background/Default/Primary
+Button/Destructive/Tertiary/Background/Hover	S:Background/Status/Error/Subtle
+Button/Destructive/Tertiary/Background/Loading	S:Background/Status/Error/Subtle
+Button/Destructive/Tertiary/Focus Ring/Border/Error	S:Focus Ring/Border/Error
+Button/Destructive/Tertiary/Focus Ring/Halo/Error	S:Focus Ring/Halo/Error
+Button/Destructive/Tertiary/Icon/Default	S:Icon/Status/Error
+Button/Destructive/Tertiary/Icon/Disabled	S:Icon/Default/Disabled
+Button/Destructive/Tertiary/Icon/Focus	S:Icon/Status/Error
+Button/Destructive/Tertiary/Icon/Hover	P:Colors/Primary/Error/600
+Button/Destructive/Tertiary/Icon/Pressed	P:Colors/Primary/Error/700
+Button/Destructive/Tertiary/Spinner/Error	S:Icon/Status/Error
+Button/Destructive/Tertiary/Text/Default	P:Colors/Primary/Error/500
+Button/Destructive/Tertiary/Text/Disabled	S:Text/Default/Disabled
+Button/Destructive/Tertiary/Text/Focus	P:Colors/Primary/Error/500
+Button/Destructive/Tertiary/Text/Hover	S:Text/Status/Error
+Button/Destructive/Tertiary/Text/Loading	P:Colors/Primary/Error/500
+Card/Background/Default	S:Background/Default/Primary
+Card/Background/Disabled	S:Background/Default/Disabled
+Card/Background/Subtle	S:Background/Default/Secondary
+Card/Border/Default	S:Border/Default/Primary
+Card/Border/Subtle	S:Border/Default/Secondary
+Card/Icon/Default	S:Icon/Default/Secondary
+Card/Text/Description	S:Text/Default/Secondary
+Card/Text/Title	S:Text/Default/Primary
+Checkbox/Background/Checked	P:Colors/Primary/Brand/600
+Checkbox/Background/Checked Focus	P:Colors/Primary/Brand/600
+Checkbox/Background/Checked Hover	P:Colors/Primary/Brand/700
+Checkbox/Background/Default	S:Background/Default/Primary
+Checkbox/Background/Disabled	P:Colors/Primary/Grey/50
+Checkbox/Background/Focus	S:Background/Interactive/Hover
+Checkbox/Background/Hover	S:Background/Interactive/Hover
+Checkbox/Background/Indeterminate	P:Colors/Primary/Brand/600
+Checkbox/Border/Checked	P:Colors/Primary/Brand/600
+Checkbox/Border/Checked Focus	P:Colors/Primary/Brand/600
+Checkbox/Border/Checked Hover	P:Colors/Primary/Brand/700
+Checkbox/Border/Default	S:Border/Default/Primary
+Checkbox/Border/Disabled	P:Colors/Primary/Grey/200
+Checkbox/Border/Focus	P:Colors/Primary/Brand/600
+Checkbox/Border/Hover	S:Border/Interactive/Hover
+Checkbox/Border/Indeterminate	P:Colors/Primary/Brand/600
+Checkbox/Indicator/Checked	S:Icon/On Brand/Primary
+Checkbox/Indicator/Disabled	P:Colors/Primary/Grey/300
+Checkbox/Indicator/Indeterminate	P:Colors/Base/white
+Chip/Background/Default	S:Background/Default/Secondary
+Chip/Background/Default Hover	S:Background/Default/Tertiary
+Chip/Background/Disabled	S:Background/Default/Disabled
+Chip/Background/Selected	S:Background/Brand/Subtle
+Chip/Background/Selected Hover	S:Background/Brand/Hover
+Chip/Border/Default	S:Border/Default/Secondary
+Chip/Border/Default Hover	S:Border/Default/Primary
+Chip/Border/Disabled	S:Border/Default/Disabled
+Chip/Border/Selected	S:Border/Brand/Primary
+Chip/Border/Selected Hover	S:Border/Brand/Secondary
+Chip/Close/Default	S:Icon/Default/Tertiary
+Chip/Close/Disabled	S:Icon/Default/Disabled
+Chip/Close/Hover	S:Icon/Default/Secondary
+Chip/Dot/Default	S:Icon/Default/Tertiary
+Chip/Dot/Disabled	S:Icon/Default/Disabled
+Chip/Dot/Selected	S:Icon/Brand/Secondary
+Chip/Focus Ring/Default	S:Focus Ring/Halo/Primary
+Chip/Icon/Default	S:Icon/Default/Secondary
+Chip/Icon/Default Hover	S:Icon/Default/Primary
+Chip/Icon/Disabled	S:Icon/Default/Disabled
+Chip/Icon/Selected	S:Icon/Brand/Primary
+Chip/Label/Default	S:Text/Default/Secondary
+Chip/Label/Default Hover	S:Text/Default/Primary
+Chip/Label/Disabled	S:Text/Default/Disabled
+Chip/Label/Selected	S:Text/Brand/Primary
+Input Group/Addon Text/Default	S:Text/Default/Tertiary
+Input/Affix/Text/Default	!VariableID:0f679e846baf8e5b17dbc8d235cff0e596297e25/13168:770
+Input/Background/Default	S:Background/Default/Primary
+Input/Background/Disabled	S:Background/Default/Disabled
+Input/Background/Error	S:Background/Default/Primary
+Input/Background/Focus	S:Background/Default/Primary
+Input/Background/Read Only	S:Background/Default/Secondary
+Input/Border/Default	S:Border/Default/Primary
+Input/Border/Disabled	S:Border/Default/Disabled
+Input/Border/Error	S:Border/Status/Error
+Input/Border/Error/Subtle	!VariableID:b048af52a91882cf25de525336b4e404ecad2440/13168:773
+Input/Border/Focus	S:Border/Brand/Primary
+Input/Border/Hover	S:Border/Default/Secondary
+Input/Border/Read Only	S:Border/Default/Disabled
+Input/Border/Success	S:Border/Status/Success
+Input/Border/Warning	S:Border/Status/Warning
+Input/Caret/Default	S:Foreground/Default/Primary
+Input/Caret/Disabled	S:Foreground/Default/Disabled
+Input/Caret/Error	S:Foreground/Status/Error
+Input/Caret/Success	S:Foreground/Status/Success
+Input/Caret/Warning	S:Foreground/Status/Warning
+Input/Focus Ring/Default	S:Focus Ring/Halo/Primary
+Input/Focus Ring/Error	S:Focus Ring/Halo/Error
+Input/Focus Ring/Success	S:Focus Ring/Halo/Success
+Input/Focus Ring/Warning	S:Focus Ring/Halo/Warning
+Input/Helper Text/Default	S:Text/Default/Secondary
+Input/Helper Text/Disabled	S:Text/Default/Disabled
+Input/Helper Text/Error	S:Text/Status/Error
+Input/Icon/Border	!VariableID:9fd7582241c423ebf3c70b3c223ad2794af063a5/13168:771
+Input/Icon/Default	!VariableID:9bea7eef5dd123a782c39ce42e8e7ffdd8d94c4a/13168:817
+Input/Icon/Disabled	S:Icon/Default/Placeholder
+Input/Icon/Error	S:Icon/Status/Error
+Input/Icon/Focus	S:Icon/Default/Secondary
+Input/Icon/Success	S:Icon/Status/Success
+Input/Icon/Warning	S:Icon/Status/Warning
+Input/Label/Default	S:Text/Default/Primary
+Input/Label/Disabled	S:Text/Default/Disabled
+Input/Label/Error	S:Text/Status/Error
+Input/Label/Focus	S:Text/Default/Primary
+Input/Label/Required	S:Text/Status/Error
+Input/Placeholder/Default	S:Text/Default/Placeholder
+Input/Placeholder/Disabled	S:Text/Default/Disabled
+Input/Placeholder/Error	S:Text/Default/Placeholder
+Input/Placeholder/Focus	S:Text/Default/Placeholder
+Input/Placeholder/Subtle	!VariableID:0e5ddac836381121056ee44c07f384dab0d2530d/13168:941
+Input/Shadow/Default	!VariableID:914bb4b715e5256f630dae6d44641d2732b455cc/13168:1090
+Input/Tag/Border	!VariableID:8fced3dc278a335138748655e47ddf4dc6ee44e9/13168:785
+Input/Tag/Text/Active	!VariableID:7c8076645b6c7bb184b45bce249ac5fa7d24ec8b/13168:769
+Input/Tag/Text/Default	!VariableID:6a8bc4fa948a567f92b4a28b13179e583796140e/13168:796
+Input/Text/Default	S:Text/Default/Primary
+Input/Text/Disabled	S:Text/Default/Disabled
+Input/Text/Error	S:Text/Default/Primary
+Input/Text/Focus	S:Text/Default/Primary
+Input/Text/Read Only	S:Text/Default/Secondary
+Radio/Background/Disabled	S:Background/Default/Disabled
+Radio/Background/Hover	S:Background/Default/Secondary
+Radio/Background/Pressed	S:Background/Default/Tertiary
+Radio/Background/Selected	S:Background/Default/Primary
+Radio/Background/Selected Disabled	S:Background/Default/Disabled
+Radio/Background/Selected Hover	S:Background/Default/Secondary
+Radio/Background/Unselected	S:Background/Default/Primary
+Radio/Border/Default	S:Border/Default/Primary
+Radio/Border/Disabled	S:Border/Default/Disabled
+Radio/Border/Error	S:Border/Status/Error
+Radio/Border/Focused	S:Border/Brand/Primary
+Radio/Border/Hover	S:Border/Default/Secondary
+Radio/Border/Selected	S:Border/Brand/Primary
+Radio/Border/Success	S:Border/Status/Success
+Radio/Focus Ring/Default	#ffffff
+Radio/Focus Ring/Error	#ffffff
+Radio/Indicator/Disabled	S:Icon/Default/Disabled
+Radio/Indicator/Selected	S:Icon/On Brand/Primary
+Radio/Label/Default	S:Text/Default/Primary
+Radio/Label/Disabled	S:Text/Default/Disabled
+Radio/Label/Error	S:Text/Status/Error
+Select/Background/Default	S:Background/Default/Primary
+Select/Background/Disabled	S:Background/Default/Disabled
+Select/Border/Default	S:Border/Default/Primary
+Select/Border/Disabled	S:Border/Default/Disabled
+Select/Border/Focused	S:Border/Focus Ring/Primary
+Select/Icon/Default	S:Icon/Default/Placeholder
+Select/Indicator/Required	S:Foreground/Brand/Primary
+Select/Menu/Background	S:Background/Default/Primary
+Select/Menu/Border	S:Border/Default/Secondary
+Select/Menu/ItemHover	S:Background/Default/Secondary
+Select/Text/Default	S:Text/Default/Primary
+Select/Text/Disabled	S:Text/Default/Disabled
+Select/Text/Hint	S:Text/Default/Tertiary
+Select/Text/Label	S:Text/Default/Secondary
+Select/Text/Placeholder	S:Text/Default/Placeholder
+Switch/Border/Thumb/Checked	S:Border/Brand/Primary
+Switch/Border/Thumb/Disabled	S:Border/Default/Secondary
+Switch/Border/Thumb/Unchecked	S:Border/Default/Secondary
+Switch/Border/Track/Disabled	S:Border/Default/Disabled
+Switch/Border/Track/Unchecked	S:Border/Default/Secondary
+Switch/Focus/Ring	S:Border/Focus Ring/Primary
+Switch/Thumb/Background/Default	S:Foreground/On/Brand
+Switch/Thumb/Background/Disabled	S:Background/Default/Primary
+Switch/Thumb/Shadow/Sm	P:Colors/Overlay/Black/Black 10%
+Switch/Thumb/Shadow/Xs	P:Colors/Overlay/Black/Black 4%
+Switch/Track/Background/Checked/Default	S:Background/Brand/Primary
+Switch/Track/Background/Checked/Disabled	S:Background/Default/Disabled
+Switch/Track/Background/Checked/Focus	S:Background/Brand/Primary
+Switch/Track/Background/Checked/Hover	S:Background/Brand/Hover
+Switch/Track/Background/Unchecked/Default	S:Background/Default/Tertiary
+Switch/Track/Background/Unchecked/Disabled	S:Background/Default/Disabled
+Switch/Track/Background/Unchecked/Focus	S:Background/Default/Tertiary
+Switch/Track/Background/Unchecked/Hover	S:Background/Default/Tertiary
+Tabs/Line/Indicator/Active	S:Border/Brand/Primary
+Tabs/Line/Indicator/Default	S:Border/Default/Primary
+Tabs/List/Background	S:Background/Default/Tertiary
+Tabs/List/Border/Default	S:Border/Default/Primary
+Tabs/Trigger/Background/Active	S:Background/Default/Primary
+Tabs/Trigger/Background/Default	S:Background/Default/Tertiary
+Tabs/Trigger/Background/Hover	S:Background/Default/Secondary
+Tabs/Trigger/Icon/Active	S:Icon/Default/Primary
+Tabs/Trigger/Icon/Default	S:Icon/Default/Secondary
+Tabs/Trigger/Icon/Disabled	S:Foreground/Default/Disabled
+Tabs/Trigger/Text/Active	S:Text/Default/Primary
+Tabs/Trigger/Text/Default	S:Text/Default/Secondary
+Tabs/Trigger/Text/Disabled	S:Text/Default/Disabled
+Tabs/Trigger/Text/Hover	S:Text/Default/Primary
+Tag/Brand/Background/Default	S:Background/Brand/Subtle
+Tag/Brand/Background/Hover	S:Background/Brand/Hover
+Tag/Brand/Border/Default	S:Border/Brand/Subtle
+Tag/Brand/Border/Hover	S:Border/Brand/Secondary
+Tag/Brand/Icon/Default	S:Icon/Brand/Primary
+Tag/Brand/Icon/Hover	S:Icon/On Brand/Primary
+Tag/Brand/Text/Default	S:Text/Brand/Primary
+Tag/Brand/Text/Hover	S:Text/On Brand/Primary
+Tag/Checkbox/Background/Checked	S:Background/Brand/Primary
+Tag/Checkbox/Background/Checked Hover	S:Background/Brand/Active
+Tag/Checkbox/Background/Default	S:Background/Default/Primary
+Tag/Checkbox/Background/Disabled	S:Background/Default/Disabled
+Tag/Checkbox/Border/Default	S:Border/Default/Primary
+Tag/Checkbox/Border/Disabled	S:Border/Default/Disabled
+Tag/Checkbox/Focus Ring	S:Focus Ring/Halo/Primary
+Tag/Checkbox/Icon/Disabled	S:Foreground/Default/Disabled
+Tag/Checkbox/Icon/On Brand	S:Foreground/On/Brand
+Tag/Error/Background/Default	S:Background/Status/Error/Subtle
+Tag/Error/Background/Hover	S:Background/Status/Error/Hover
+Tag/Error/Border/Default	S:Border/Status/Error
+Tag/Error/Border/Hover	S:Border/Status/Error
+Tag/Error/Icon/Default	S:Icon/Status/Error
+Tag/Error/Icon/Hover	S:Icon/Status/Error
+Tag/Error/Text/Default	S:Text/Status/Error
+Tag/Error/Text/Hover	S:Text/Status/Error
+Tag/Grey/Background/Default	S:Background/Default/Secondary
+Tag/Grey/Background/Disabled	S:Background/Default/Disabled
+Tag/Grey/Background/Hover	S:Background/Default/Tertiary
+Tag/Grey/Border/Default	S:Border/Default/Secondary
+Tag/Grey/Border/Disabled	S:Border/Default/Disabled
+Tag/Grey/Border/Hover	S:Border/Default/Primary
+Tag/Grey/Icon/Default	S:Icon/Default/Secondary
+Tag/Grey/Icon/Disabled	S:Icon/Default/Disabled
+Tag/Grey/Icon/Hover	S:Icon/Default/Primary
+Tag/Grey/Text/Default	S:Text/Default/Secondary
+Tag/Grey/Text/Disabled	S:Text/Default/Disabled
+Tag/Grey/Text/Hover	S:Text/Default/Primary
+Tag/Success/Background/Default	S:Background/Status/Success/Subtle
+Tag/Success/Background/Hover	S:Background/Status/Success/Hover
+Tag/Success/Border/Default	S:Border/Status/Success
+Tag/Success/Border/Hover	S:Border/Status/Success
+Tag/Success/Icon/Default	S:Icon/Status/Success
+Tag/Success/Icon/Hover	S:Icon/Status/Success
+Tag/Success/Text/Default	S:Text/Status/Success
+Tag/Success/Text/Hover	S:Text/Status/Success
+Tag/Warning/Background/Default	S:Background/Status/Warning/Subtle
+Tag/Warning/Background/Hover	S:Background/Status/Warning/Hover
+Tag/Warning/Border/Default	S:Border/Status/Warning
+Tag/Warning/Border/Hover	S:Border/Status/Warning
+Tag/Warning/Icon/Default	S:Icon/Status/Warning
+Tag/Warning/Icon/Hover	S:Icon/Status/Warning
+Tag/Warning/Text/Default	S:Text/Status/Warning
+Tag/Warning/Text/Hover	S:Text/Status/Warning

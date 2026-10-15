@@ -1,0 +1,10 @@
+{
+  "$collection": "4.Screen widths",
+  "Screen/XS":  { "$value": 320,  "$type": "dimension", "$description": "Small mobile" },
+  "Screen/SM":  { "$value": 640,  "$type": "dimension", "$description": "Large mobile / small tablet" },
+  "Screen/MD":  { "$value": 768,  "$type": "dimension", "$description": "Tablet" },
+  "Screen/LG":  { "$value": 1024, "$type": "dimension", "$description": "Small desktop" },
+  "Screen/XL":  { "$value": 1280, "$type": "dimension", "$description": "Main desktop" },
+  "Screen/2XL": { "$value": 1440, "$type": "dimension", "$description": "Large desktop" },
+  "Screen/3XL": { "$value": 1600, "$type": "dimension", "$description": "Wide desktop" }
+}

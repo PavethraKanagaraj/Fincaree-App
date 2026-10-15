@@ -1,0 +1,10 @@
+{
+  "$collection": "6.Z Index",
+  "Base":     { "$value": 0,   "$type": "number" },
+  "Sticky":   { "$value": 100, "$type": "number" },
+  "Dropdown": { "$value": 200, "$type": "number" },
+  "Popover":  { "$value": 300, "$type": "number" },
+  "Modal":    { "$value": 400, "$type": "number" },
+  "Toast":    { "$value": 500, "$type": "number" },
+  "Tooltip":  { "$value": 600, "$type": "number" }
+}

@@ -1,0 +1,20 @@
+{
+  "$collection": "3.Spacing",
+  "Spacing/0":    { "$value": 0,  "$type": "dimension", "$description": "No spacing" },
+  "Spacing/25":   { "$value": 2,  "$type": "dimension", "$description": "Hairline/tight adjustment" },
+  "Spacing/50":   { "$value": 4,  "$type": "dimension", "$description": "Icon/text micro gap" },
+  "Spacing/75":   { "$value": 6,  "$type": "dimension", "$description": "Small internal adjustment" },
+  "Spacing/100":  { "$value": 8,  "$type": "dimension", "$description": "Compact gaps" },
+  "Spacing/150":  { "$value": 12, "$type": "dimension", "$description": "Small component gaps" },
+  "Spacing/200":  { "$value": 16, "$type": "dimension", "$description": "Standard padding/gap" },
+  "Spacing/250":  { "$value": 20, "$type": "dimension", "$description": "Comfortable component spacing" },
+  "Spacing/300":  { "$value": 24, "$type": "dimension", "$description": "Card padding / section gap" },
+  "Spacing/400":  { "$value": 32, "$type": "dimension", "$description": "Component-to-component" },
+  "Spacing/500":  { "$value": 40, "$type": "dimension", "$description": "Larger section spacing" },
+  "Spacing/600":  { "$value": 48, "$type": "dimension", "$description": "Page-level spacing" },
+  "Spacing/700":  { "$value": 56, "$type": "dimension", "$description": "Large separation" },
+  "Spacing/800":  { "$value": 64, "$type": "dimension", "$description": "Major section spacing" },
+  "Spacing/900":  { "$value": 72, "$type": "dimension", "$description": "Large layout spacing" },
+  "Spacing/1000": { "$value": 80, "$type": "dimension", "$description": "Very large separation" },
+  "Spacing/1200": { "$value": 96, "$type": "dimension", "$description": "Page/hero-level spacing" }
+}

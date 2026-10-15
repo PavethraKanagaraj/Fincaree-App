@@ -1,0 +1,120 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "Fincaree B2B Design System — index of all exported Figma token files",
+  "$figmaFile": "E3iIKwdE2far5TdrPYla2z",
+  "$figmaUrl": "https://www.figma.com/design/E3iIKwdE2far5TdrPYla2z/Design-System-Master-File?view=variables",
+  "$exportedAt": "2026-09-03",
+
+  "collections": [
+    {
+      "name": "x_Primitives",
+      "file": "primitives.json",
+      "description": "Raw hex color values — brand, grey, status (error/warning/success/info), secondary palettes, overlays, and base colors. Single mode. Never reference directly from components — always via semantic aliases.",
+      "modes": ["Light/Dark Mode"],
+      "variableCount": 171
+    },
+    {
+      "name": "1.Semantic color modes",
+      "file": "semantic-colors.json",
+      "description": "Semantic color aliases for all UI roles: Text, Icon, Background, Border, Foreground, Overlay, Focus Ring, Chart, Sidebar. Switches between Light Mode and Dark Mode. This is the layer components and code should reference for color.",
+      "modes": ["Light Mode", "Dark Mode"],
+      "variableCount": 80
+    },
+    {
+      "name": "2.Radius",
+      "file": "radius.json",
+      "description": "Border radius scale: None (0px) through Full (9999px). Single mode.",
+      "modes": ["Mode 1"],
+      "variableCount": 11
+    },
+    {
+      "name": "3.Spacing",
+      "file": "spacing.json",
+      "description": "Spacing scale from Spacing/0 (0px) to Spacing/1200 (96px). Used for padding, gap, and margin. Single mode.",
+      "modes": ["Mode 1"],
+      "variableCount": 17
+    },
+    {
+      "name": "4.Screen widths",
+      "file": "screen-widths.json",
+      "description": "Responsive breakpoints: Screen/XS (320px) through Screen/3XL (1600px). Primary design target is Screen/XL (1280px).",
+      "modes": ["Mode 1"],
+      "variableCount": 7
+    },
+    {
+      "name": "5.Typography",
+      "file": "typography.json",
+      "description": "Font size, line height, letter spacing, font weight (number), font family, and font style (string) tokens. Font family is Geist. Single mode.",
+      "modes": ["Mode 1"],
+      "variableCount": 45
+    },
+    {
+      "name": "6.Z Index",
+      "file": "z-index.json",
+      "description": "Z-index layering scale: Base (0) → Sticky (100) → Dropdown (200) → Popover (300) → Modal (400) → Toast (500) → Tooltip (600). Single mode.",
+      "modes": ["Mode 1"],
+      "variableCount": 7
+    },
+    {
+      "name": "7.Components",
+      "file": "components.json",
+      "description": "Component-specific color tokens aliased to 1.Semantic color modes. Covers Button, Input, Switch, Tabs, Avatar, Tooltip, Checkbox, Radio. Light and Dark modes.",
+      "modes": ["Light Mode", "Dark Mode"],
+      "variableCount": 85
+    },
+    {
+      "name": "8.Icons",
+      "file": "icons.json",
+      "description": "Icon size (Icon/Size/*) and stroke weight (Icon/Weight/*) tokens. Color is not stored here — icon colors live in 1.Semantic color modes under Icon/* tokens. Light and Dark modes (values are identical across modes).",
+      "modes": ["Light", "Dark"],
+      "variableCount": 9,
+      "tokens": {
+        "size": {
+          "Icon/Size/XS":  12,
+          "Icon/Size/SM":  16,
+          "Icon/Size/MD":  20,
+          "Icon/Size/LG":  24,
+          "Icon/Size/XL":  32,
+          "Icon/Size/2XL": 40
+        },
+        "weight": {
+          "Icon/Weight/Regular": 1.5,
+          "Icon/Weight/Bold":    2,
+          "Icon/Weight/Strong":  2.5
+        }
+      }
+    }
+  ],
+
+  "styles": [
+    {
+      "name": "Text Styles",
+      "file": "text-styles.json",
+      "description": "28 text styles across Display, Heading (H1–H6), Body, Caption, and Label groups. All 5 properties (fontSize, lineHeight, letterSpacing, fontFamily, fontStyle) bound to 5.Typography variables.",
+      "count": 28
+    },
+    {
+      "name": "Effect Styles",
+      "file": "shadows.json",
+      "description": "21 shadow/effect styles across Shadow/Light, Shadow/Dark, Shadow/Glass, Shadow/Blur, and Shadow/Focus Ring groups. Effect colors bound to variables. Geometry values (X/Y/blur/spread) are hardcoded — Figma does not support variable binding for these.",
+      "count": 21
+    },
+    {
+      "name": "Grid Styles",
+      "file": "grids.json",
+      "description": "4 layout grids: Grid/MD (768px, 8 col, 24px gutter), Grid/LG (1024px, 12 col, 24px gutter), Grid/XL (1280px, 12 col, 32px gutter), Grid/2XL (1440px, 12 col, 32px gutter).",
+      "count": 4
+    }
+  ],
+
+  "tokenArchitecture": {
+    "colorChain": "x_Primitives → 1.Semantic color modes → 7.Components",
+    "iconColorPath": "x_Primitives → 1.Semantic color modes (Icon/* tokens) — used directly, no component alias needed",
+    "rules": [
+      "Raw hex lives only in x_Primitives — anything raw elsewhere is a bug",
+      "1.Semantic color modes handles all Light/Dark switching",
+      "7.Components aliases to Semantic — never directly to Primitives",
+      "8.Icons contains size and weight only — never color"
+    ]
+  }
+}

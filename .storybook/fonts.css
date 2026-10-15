@@ -1,0 +1,11 @@
+/* Geist for Storybook. The app loads it through next/font (geist/font/sans),
+   which Storybook's Vite build can't pre-bundle, so load the same file
+   directly. --font-family falls back to "Geist" when --font-geist-sans
+   is unset, which is the case here. */
+@font-face {
+  font-family: "Geist";
+  src: url("../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

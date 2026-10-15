@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# Next.js / build output
+.next/
+out/
+storybook-static/
+*.tsbuildinfo
+next-env.d.ts
+
+# logs
+*.log
+
+# env / secrets
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# Tooling / local config
+.claude/
+.impeccable/
+.mcp.json
+.vscode/

@@ -1,0 +1,14 @@
+{
+  "$collection": "2.Radius",
+  "None":  { "$value": 0,    "$type": "dimension" },
+  "XS":    { "$value": 2,    "$type": "dimension" },
+  "SM":    { "$value": 4,    "$type": "dimension" },
+  "MD":    { "$value": 6,    "$type": "dimension" },
+  "LG":    { "$value": 8,    "$type": "dimension" },
+  "XL":    { "$value": 12,   "$type": "dimension" },
+  "2XL":   { "$value": 14,   "$type": "dimension" },
+  "3XL":   { "$value": 16,   "$type": "dimension" },
+  "4XL":   { "$value": 24,   "$type": "dimension" },
+  "5XL":   { "$value": 32,   "$type": "dimension" },
+  "Full":  { "$value": 9999, "$type": "dimension" }
+}

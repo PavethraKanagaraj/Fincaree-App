@@ -1,0 +1,42 @@
+import type { Metadata } from "next";
+import { GeistSans } from "geist/font/sans";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Fincaree",
+  description: "AI-Powered Financial Advisory Platform",
+  icons: {
+    icon: "data:image/png;base64,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",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${GeistSans.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Applies the stored theme before first paint so the page never
+            flashes light before switching to dark. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('fincaree-theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();`,
+          }}
+        />
+      </head>
+      {/* suppressHydrationWarning: browser extensions (password managers,
+          ColorZilla and friends) add attributes to <body> before React
+          hydrates. It only covers this element's own attributes, one level
+          deep, so real mismatches inside the app still surface. */}
+      <body className="min-h-screen" suppressHydrationWarning>
+        {children}
+      </body>
+    </html>
+  );
+}

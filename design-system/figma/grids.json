@@ -1,0 +1,9 @@
+{
+  "$type": "gridStyles",
+  "$source": "Figma — Design System Master File",
+  "$description": "4 column grid styles for Fincaree B2B SaaS — desktop primary",
+  "Grid/MD":  { "columns": 8,  "gutterSize": 24, "offset": 24, "alignment": "STRETCH", "breakpoint": 768,  "purpose": "Tablet" },
+  "Grid/LG":  { "columns": 12, "gutterSize": 24, "offset": 32, "alignment": "STRETCH", "breakpoint": 1024, "purpose": "Small desktop" },
+  "Grid/XL":  { "columns": 12, "gutterSize": 32, "offset": 64, "alignment": "STRETCH", "breakpoint": 1280, "purpose": "Main desktop — design here first" },
+  "Grid/2XL": { "columns": 12, "gutterSize": 32, "offset": 80, "alignment": "STRETCH", "breakpoint": 1440, "purpose": "Large desktop" }
+}

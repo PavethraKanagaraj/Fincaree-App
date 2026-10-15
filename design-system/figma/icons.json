@@ -1,0 +1,208 @@
+{
+  "$schema": "https://schemas.tokens.studio/tokens.schema.json",
+  "$description": "Combined Fincaree design tokens \u2014 Dark and Light modes",
+  "modes": {
+    "Dark": {
+      "Icon": {
+        "Size": {
+          "XS": {
+            "$type": "number",
+            "$value": 12,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:17",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "SM": {
+            "$type": "number",
+            "$value": 16,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:18",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "MD": {
+            "$type": "number",
+            "$value": 20,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:19",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "LG": {
+            "$type": "number",
+            "$value": 24,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:20",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "XL": {
+            "$type": "number",
+            "$value": 32,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:21",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "2XL": {
+            "$type": "number",
+            "$value": 40,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:22",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          }
+        },
+        "Weight": {
+          "Regular": {
+            "$type": "number",
+            "$value": 1.5,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:23",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "Bold": {
+            "$type": "number",
+            "$value": 2,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:24",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "Strong": {
+            "$type": "number",
+            "$value": 2.5,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10478:20206",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          }
+        }
+      },
+      "$extensions": {
+        "com.figma.modeName": "Dark"
+      }
+    },
+    "Light": {
+      "Icon": {
+        "Size": {
+          "XS": {
+            "$type": "number",
+            "$value": 12,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:17",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "SM": {
+            "$type": "number",
+            "$value": 16,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:18",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "MD": {
+            "$type": "number",
+            "$value": 20,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:19",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "LG": {
+            "$type": "number",
+            "$value": 24,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:20",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "XL": {
+            "$type": "number",
+            "$value": 32,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:21",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "2XL": {
+            "$type": "number",
+            "$value": 40,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:22",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          }
+        },
+        "Weight": {
+          "Regular": {
+            "$type": "number",
+            "$value": 1.5,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:23",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "Bold": {
+            "$type": "number",
+            "$value": 2,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10480:24",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          },
+          "Strong": {
+            "$type": "number",
+            "$value": 2.5,
+            "$extensions": {
+              "com.figma.variableId": "VariableID:10478:20206",
+              "com.figma.scopes": [
+                "ALL_SCOPES"
+              ]
+            }
+          }
+        }
+      },
+      "$extensions": {
+        "com.figma.modeName": "Light"
+      }
+    }
+  }
+}
