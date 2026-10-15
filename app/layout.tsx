@@ -19,22 +19,9 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${GeistSans.variable} h-full antialiased`}
-      suppressHydrationWarning
+      data-theme="light"
     >
-      <head>
-        {/* Applies the stored theme before first paint so the page never
-            flashes light before switching to dark. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('fincaree-theme');if(t!=='dark'&&t!=='light'){t='light';}document.documentElement.dataset.theme=t;}catch(e){}})();`,
-          }}
-        />
-      </head>
-      {/* suppressHydrationWarning: browser extensions (password managers,
-          ColorZilla and friends) add attributes to <body> before React
-          hydrates. It only covers this element's own attributes, one level
-          deep, so real mismatches inside the app still surface. */}
-      <body className="min-h-screen" suppressHydrationWarning>
+      <body className="min-h-screen">
         {children}
       </body>
     </html>

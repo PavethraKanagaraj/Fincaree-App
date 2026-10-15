@@ -26,11 +26,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/fincaree/dropdown-menu";
-import { ThemeToggle } from "./ThemeToggle";
-
 /* ============================================================
    Fincaree Top Navigation Bar
-   Search | Quick Create | Finny AI | Theme | Notifications | Profile
+   Search | Quick Create | Finny AI | Notifications | Profile
    ============================================================ */
 
 export function TopNav() {
@@ -115,11 +113,6 @@ export function TopNav() {
       >
         <span className="text-[var(--text-secondary)]">Finny AI Copilot</span>
       </Button>
-
-      {/* Light / dark mode */}
-      <div className="shrink-0">
-        <ThemeToggle />
-      </div>
 
       {/* Notifications */}
       <button
