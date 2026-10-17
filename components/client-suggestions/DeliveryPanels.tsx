@@ -5,8 +5,7 @@
 
    SendLog         every send: what went to whom, why, who approved
                    it. Exportable for the annual audit.
-   MarketingZone   nurture sequences for leads who did not convert.
-                   Kept visibly apart from plan-linked client sends.
+   (Marketing now lives in MarketingZone.tsx.)
 
    (Post-meeting packages now start from Finny's suggestions in the
    Compose & send builder; see SequenceBuilder.)
@@ -14,22 +13,18 @@
    Sourcing: Fincaree Badge, Button, ui/table.
    ============================================================ */
 
+import { useState } from "react";
 import { Badge } from "@/components/fincaree/badge";
 import { Button } from "@/components/fincaree/button";
+import { Input } from "@/components/fincaree/input";
+import { SelectField, SelectItem } from "@/components/fincaree/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Ban, Download, Megaphone, ShieldCheck, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search, X } from "lucide-react";
 import {
   AUDIT_ACTION_LABEL,
   type AuditAction,
   type AuditEntry,
-  type ContentItem,
 } from "./content-data";
-import {
-  NURTURE_RULES,
-  NURTURE_SEQUENCES,
-  holdReason,
-  isSendableToLeads,
-} from "./delivery-data";
 
 /* ─── Send log ─── */
 
@@ -67,9 +62,43 @@ function exportCsv(entries: AuditEntry[]) {
   URL.revokeObjectURL(url);
 }
 
+const ROWS_PER_PAGE = 15;
+const ALL = "all";
+const ACTOR_FILTER_LABEL: Record<string, string> = { [ALL]: "Everyone", ...ACTOR_LABEL };
+const ACTION_FILTER_LABEL: Record<string, string> = { [ALL]: "All actions", ...AUDIT_ACTION_LABEL };
+
 export function SendLog({ entries }: { entries: AuditEntry[] }) {
+  const [query, setQuery] = useState("");
+  const [action, setAction] = useState<string>(ALL);
+  const [actor, setActor] = useState<string>(ALL);
+  const [page, setPage] = useState(0);
+
   /* Newest first: "Just now" entries are appended, so reverse. */
   const ordered = [...entries].reverse();
+  const q = query.trim().toLowerCase();
+  const filtered = ordered.filter(
+    (e) =>
+      (action === ALL || e.action === action) &&
+      (actor === ALL || e.actor === actor) &&
+      (!q || [e.itemName, e.detail ?? "", e.ref ?? "", AUDIT_ACTION_LABEL[e.action]].some((t) => t.toLowerCase().includes(q))),
+  );
+  const isFiltered = Boolean(q) || action !== ALL || actor !== ALL;
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const from = safePage * ROWS_PER_PAGE;
+  const rows = filtered.slice(from, from + ROWS_PER_PAGE);
+
+  /* Only actions that exist in the log are offered, so every choice returns something. */
+  const presentActions = (Object.keys(AUDIT_ACTION_LABEL) as AuditAction[]).filter((a) => entries.some((e) => e.action === a));
+
+  function clearFilters() {
+    setQuery("");
+    setAction(ALL);
+    setActor(ALL);
+    setPage(0);
+  }
+
   return (
     <section aria-label="Send log" className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -81,9 +110,75 @@ export function SendLog({ entries }: { entries: AuditEntry[] }) {
             What went to whom, when, why it was triggered and who approved it. Export it for the annual audit.
           </p>
         </div>
-        <Button variant="secondary" size="sm" leadingIcon={<Download size={14} strokeWidth={1.75} />} onClick={() => exportCsv(ordered)}>
-          Export CSV
+        <Button
+          variant="secondary"
+          size="sm"
+          leadingIcon={<Download size={14} strokeWidth={1.75} />}
+          disabled={filtered.length === 0}
+          onClick={() => exportCsv(filtered)}
+        >
+          {isFiltered ? `Export ${filtered.length} filtered` : "Export CSV"}
         </Button>
+      </div>
+
+      {/* Find things: the log can run to thousands of rows */}
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="w-[280px]">
+          <Input
+            size="sm"
+            label="Search"
+            aria-label="Search the send log"
+            placeholder="Content, client, reference…"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(0);
+            }}
+            leadingIcon={<Search size={14} strokeWidth={1.75} />}
+          />
+        </div>
+        <div className="w-[220px]">
+          <SelectField
+            size="sm"
+            label="Action"
+            value={action}
+            items={Object.fromEntries([[ALL, ACTION_FILTER_LABEL[ALL]], ...presentActions.map((a) => [a, AUDIT_ACTION_LABEL[a]])])}
+            onValueChange={(v: unknown) => {
+              setAction(v as string);
+              setPage(0);
+            }}
+          >
+            <SelectItem value={ALL}>{ACTION_FILTER_LABEL[ALL]}</SelectItem>
+            {presentActions.map((a) => (
+              <SelectItem key={a} value={a}>
+                {AUDIT_ACTION_LABEL[a]}
+              </SelectItem>
+            ))}
+          </SelectField>
+        </div>
+        <div className="w-[160px]">
+          <SelectField
+            size="sm"
+            label="By"
+            value={actor}
+            items={ACTOR_FILTER_LABEL}
+            onValueChange={(v: unknown) => {
+              setActor(v as string);
+              setPage(0);
+            }}
+          >
+            {Object.entries(ACTOR_FILTER_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectField>
+        </div>
+        {isFiltered && (
+          <Button variant="tertiary" size="sm" leadingIcon={<X size={14} strokeWidth={1.75} />} onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
       </div>
 
       <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] overflow-hidden">
@@ -91,14 +186,14 @@ export function SendLog({ entries }: { entries: AuditEntry[] }) {
           <TableHeader>
             <TableRow>
               <TableHead className="px-5 py-3 text-xs text-[var(--text-tertiary)] font-medium w-44">Time</TableHead>
-              <TableHead className="px-3 py-3 text-xs text-[var(--text-tertiary)] font-medium w-44">Action</TableHead>
+              <TableHead className="px-3 py-3 text-xs text-[var(--text-tertiary)] font-medium w-52">Action</TableHead>
               <TableHead className="px-3 py-3 text-xs text-[var(--text-tertiary)] font-medium">Content</TableHead>
               <TableHead className="px-3 py-3 text-xs text-[var(--text-tertiary)] font-medium w-28">By</TableHead>
-              <TableHead className="px-3 pr-5 py-3 text-xs text-[var(--text-tertiary)] font-medium">Detail</TableHead>
+              <TableHead className="px-3 pr-5 py-3 text-xs text-[var(--text-tertiary)] font-medium w-[34%]">Detail</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ordered.map((e) => (
+            {rows.map((e) => (
               <TableRow key={e.id}>
                 <TableCell className="px-5 py-3 text-xs text-[var(--text-tertiary)] whitespace-nowrap">{e.timestamp}</TableCell>
                 <TableCell className="px-3 py-3">
@@ -106,98 +201,43 @@ export function SendLog({ entries }: { entries: AuditEntry[] }) {
                     {AUDIT_ACTION_LABEL[e.action]}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-3 py-3 text-sm font-semibold text-[var(--text-primary)]">{e.itemName}</TableCell>
+                <TableCell className="px-3 py-3 text-sm font-semibold text-[var(--text-primary)]">
+                  <span className="line-clamp-2">{e.itemName}</span>
+                  {e.ref && <span className="block text-xs font-normal text-[var(--text-tertiary)] tabular-nums">{e.ref}</span>}
+                </TableCell>
                 <TableCell className="px-3 py-3 text-xs text-[var(--text-secondary)]">{ACTOR_LABEL[e.actor]}</TableCell>
-                <TableCell className="px-3 pr-5 py-3 text-xs text-[var(--text-secondary)]">{e.detail ?? "—"}</TableCell>
+                <TableCell className="px-3 pr-5 py-3 text-xs text-[var(--text-secondary)]">
+                  <span className="line-clamp-2" title={e.detail}>
+                    {e.detail ?? "—"}
+                  </span>
+                </TableCell>
               </TableRow>
             ))}
+            {filtered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="px-5 py-10 text-center text-sm text-[var(--text-tertiary)]">
+                  Nothing in the log matches these filters.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
-      </div>
-    </section>
-  );
-}
 
-/* ─── Marketing zone ─── */
-
-export function MarketingZone({ items }: { items: ContentItem[] }) {
-  const byId = new Map(items.map((i) => [i.id, i]));
-  return (
-    <section aria-label="Marketing" className="space-y-5">
-      {/* The separation is the point — say it at the top of the zone. */}
-      <div className="flex items-start gap-3 rounded-[var(--radius-xl)] border border-[var(--border-brand-secondary)] bg-[var(--bg-brand-subtle)] px-5 py-4">
-        <Megaphone size={18} strokeWidth={1.75} className="text-[var(--icon-brand-primary)] shrink-0 mt-0.5" />
-        <div>
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Marketing — for leads who did not convert</h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5 max-w-[680px]">
-            Nurture sequences for people after their discovery call. This is a separate zone from plan-linked client content: nothing here is
-            sent to subscribed clients, and client content is never used for marketing.
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[var(--border-tertiary)]">
+          <p aria-live="polite" className="text-xs text-[var(--text-secondary)] tabular-nums">
+            {filtered.length === 0
+              ? "0 entries"
+              : `Showing ${from + 1}–${from + rows.length} of ${filtered.length}${isFiltered ? ` (filtered from ${entries.length})` : ""}`}
           </p>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" iconOnly aria-label="Previous page" leadingIcon={<ChevronLeft size={14} strokeWidth={2} />} disabled={safePage === 0} onClick={() => setPage(safePage - 1)} />
+            <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+              Page {safePage + 1} of {pageCount}
+            </span>
+            <Button variant="secondary" size="sm" iconOnly aria-label="Next page" leadingIcon={<ChevronRight size={14} strokeWidth={2} />} disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} />
+          </div>
         </div>
       </div>
-
-      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-        {NURTURE_RULES.map((rule) => (
-          <li key={rule} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <ShieldCheck size={14} strokeWidth={1.75} className="text-[var(--icon-status-success)] shrink-0" />
-            {rule}
-          </li>
-        ))}
-      </ul>
-
-      <ul className="space-y-4">
-        {NURTURE_SEQUENCES.map((seq) => {
-          const steps = seq.steps.map((s) => ({ ...s, item: byId.get(s.contentId) }));
-          const blocked = steps.filter((s) => !s.item || !isSendableToLeads(s.item));
-          return (
-            <li
-              key={seq.id}
-              className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] px-5 py-4"
-            >
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{seq.name}</h3>
-                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{seq.description}</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Badge size="sm" color="gray" leadingIcon={<Users size={11} strokeWidth={2} />}>
-                    {seq.leads} leads
-                  </Badge>
-                  <Badge size="sm" color={seq.status === "active" ? "success" : "gray"}>
-                    {seq.status === "active" ? "Active" : "Paused"}
-                  </Badge>
-                </div>
-              </div>
-
-              <ol className="mt-3 divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
-                {steps.map((s) => (
-                  <li key={`${seq.id}-${s.day}`} className="flex items-center justify-between gap-3 py-2.5">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-xs font-semibold text-[var(--text-tertiary)] tabular-nums w-14 shrink-0">Day {s.day}</span>
-                      <span className="text-sm text-[var(--text-primary)] truncate">{s.item?.title ?? "Content unavailable"}</span>
-                    </div>
-                    {s.item && isSendableToLeads(s.item) ? (
-                      <Badge size="sm" color="success">
-                        Approved
-                      </Badge>
-                    ) : (
-                      <Badge size="sm" color="warning" leadingIcon={<Ban size={11} strokeWidth={2} />}>
-                        {s.item ? (holdReason(s.item, "leads") ?? "Not for leads") : "Content unavailable"}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ol>
-
-              <p className="text-xs text-[var(--text-tertiary)] mt-3">
-                {blocked.length > 0
-                  ? `${blocked.length} step${blocked.length === 1 ? "" : "s"} can't go out until it's Approved and written for leads — the sequence will skip ${blocked.length === 1 ? "it" : "them"}.`
-                  : "Every step is Approved and written for leads."}
-              </p>
-            </li>
-          );
-        })}
-      </ul>
     </section>
   );
 }

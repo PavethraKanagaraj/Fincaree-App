@@ -29,7 +29,8 @@ import { ContentDetailDrawer, type DrawerTab } from "@/components/client-suggest
 import { SequenceBuilder, type SequenceSendPayload } from "@/components/client-suggestions/SequenceBuilder";
 import { AssignContentDrawer } from "@/components/client-suggestions/AssignContentDrawer";
 import { ReviewQueue, type ResolvedSend } from "@/components/client-suggestions/ReviewQueue";
-import { MarketingZone, SendLog } from "@/components/client-suggestions/DeliveryPanels";
+import { SendLog } from "@/components/client-suggestions/DeliveryPanels";
+import { MarketingZone } from "@/components/client-suggestions/MarketingZone";
 import {
   REVIEW_QUEUE,
   SEND_TRIGGER_LABEL,

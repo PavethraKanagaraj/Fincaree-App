@@ -441,47 +441,100 @@ export const SKIPPED_TRIGGERS = [
 /* ---- Marketing — leads who did not convert after the discovery call ---- */
 
 export interface NurtureStep {
+  /** Days after the lead joins the sequence. */
   day: number;
   contentId: string;
+  /** Results so far, across every lead who has reached this step. */
+  sent: number;
+  opened: number;
+}
+
+export interface NurtureLead {
+  id: string;
+  name: string;
+  /** Where the lead came from, e.g. the discovery call. */
+  source: string;
+  joined: string;
+  /** Messages already sent to them. The next one is steps[sentCount]. */
+  sentCount: number;
+  nextSend: string | null;
 }
 
 export interface NurtureSequence {
   id: string;
   name: string;
   description: string;
+  /** Who joins, in plain words. */
+  audience: string;
   leads: number;
+  converted: number;
   status: "active" | "paused";
   steps: NurtureStep[];
+  /** Every lead inside, most recent first. Filled in by `withLeads` below. */
+  leadList: NurtureLead[];
 }
 
-export const NURTURE_SEQUENCES: NurtureSequence[] = [
+const RAW_SEQUENCES: NurtureSequence[] = [
   {
     id: "ns-1",
     name: "After discovery — retirement focus",
-    description: "Leads whose discovery call centred on retirement.",
+    description: "Three short messages that build the case for starting a retirement plan.",
+    audience: "Leads whose discovery call centred on retirement",
     leads: 14,
+    converted: 3,
     status: "active",
     steps: [
-      { day: 2, contentId: "ct-001" },
-      { day: 7, contentId: "ct-006" },
-      { day: 14, contentId: "ct-013" },
+      { day: 2, contentId: "ct-001", sent: 17, opened: 12 },
+      { day: 7, contentId: "ct-006", sent: 11, opened: 6 },
+      { day: 14, contentId: "ct-013", sent: 5, opened: 2 },
     ],
+    leadList: [],
   },
   {
     id: "ns-2",
     name: "After discovery — getting started",
-    description: "Leads who wanted to start investing but did not subscribe.",
+    description: "For people who wanted to start investing but did not subscribe yet.",
+    audience: "Leads who wanted to start investing",
     leads: 9,
+    converted: 1,
     status: "paused",
     steps: [
-      { day: 3, contentId: "ct-006" },
-      { day: 10, contentId: "ct-001" },
-      { day: 21, contentId: "ct-007" },
+      { day: 3, contentId: "ct-006", sent: 10, opened: 5 },
+      { day: 10, contentId: "ct-001", sent: 6, opened: 3 },
+      { day: 21, contentId: "ct-007", sent: 2, opened: 1 },
     ],
+    leadList: [],
   },
 ];
 
-/** Rules that apply to every nurture sequence, and cannot be switched off. */
+const LEAD_NAMES = [
+  "Rajesh Kulkarni", "Meenal Shetty", "Sandeep Arora", "Kiran Bhat", "Pallavi Naik", "Tanvi Deshpande", "Amit Rathore",
+  "Soumya Pillai", "Harsha Reddy", "Nisha Menon", "Vivek Anand", "Charu Bansal", "Deepti Shah", "Gaurav Mehra",
+  "Ishita Roy", "Jatin Kapoor", "Lavanya Iyer", "Mukesh Tiwari", "Namrata Sen", "Omkar Joshi", "Preeti Nair", "Rohan Dutta",
+];
+
+/* Spread each sequence's leads across its schedule, newest first, so every state
+   (waiting, mid-way, finished) appears. Deterministic: no randomness. */
+function withLeads(seq: NurtureSequence, offset: number, paused: boolean): NurtureSequence {
+  const n = seq.steps.length;
+  const leadList: NurtureLead[] = Array.from({ length: seq.leads }, (_, i) => {
+    const sentCount = Math.min(n, Math.floor((i * (n + 1)) / seq.leads));
+    const joinedDay = 15 - Math.floor((i * 28) / seq.leads);
+    return {
+      id: `${seq.id}-ld-${i + 1}`,
+      name: LEAD_NAMES[(i + offset) % LEAD_NAMES.length],
+      source: "Discovery call",
+      joined: joinedDay > 0 ? `${String(joinedDay).padStart(2, "0")} Oct` : `${String(30 + joinedDay).padStart(2, "0")} Sep`,
+      sentCount,
+      nextSend: sentCount >= n ? null : `${String(18 + (i % 9)).padStart(2, "0")} Oct`,
+    };
+  });
+  return { ...seq, leadList, status: paused ? "paused" : seq.status };
+}
+
+export const NURTURE_SEQUENCES: NurtureSequence[] = RAW_SEQUENCES.map((s, i) => withLeads(s, i * 5, s.status === "paused"));
+
+/** Rules every sequence follows. Shown on the page so advisors can see what is guaranteed. */
 export const NURTURE_RULES = [
   "Stops automatically when a lead subscribes",
   "Every message carries an opt-out link",

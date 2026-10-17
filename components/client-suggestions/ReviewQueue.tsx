@@ -192,7 +192,7 @@ function ReviewCard({
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5 px-5 pb-4">
-        {/* Evidence + message */}
+        {/* Evidence + suggested content */}
         <div className="space-y-4 min-w-0">
           <div>
             <h3 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">What Finny saw</h3>
@@ -212,47 +212,50 @@ function ReviewCard({
             )}
           </div>
 
+          {/* Suggested content */}
+          <div className="min-w-0">
+            <h3 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Suggested content</h3>
+            <ul className="divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
+              {content.map((item) => {
+                const hold = holdReason(item, "clients");
+                return (
+                  <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.title}</p>
+                      <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{typeLabel(item)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {hold ? (
+                        <Badge size="sm" color="warning">
+                          {hold}
+                        </Badge>
+                      ) : (
+                        <Badge size="sm" color={contentIntent(item) === "explore" ? "brand" : "gray"}>
+                          {CONTENT_INTENT_LABEL[contentIntent(item)]}
+                        </Badge>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {held > 0 && sendable.length > 0 && (
+              <p className="text-xs text-[var(--text-tertiary)] mt-2">
+                Held content stays out of this send. Only Approved content written for clients can go to a client.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Message: the one thing the advisor writes, so it gets its own column */}
+        <div className="min-w-0">
           <Textarea
             label="Message to the client"
-            rows={3}
+            rows={6}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             error={advice ? blocker ?? undefined : undefined}
           />
-        </div>
-
-        {/* Suggested content */}
-        <div className="min-w-0">
-          <h3 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Suggested content</h3>
-          <ul className="divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
-            {content.map((item) => {
-              const hold = holdReason(item, "clients");
-              return (
-                <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.title}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{typeLabel(item)}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {hold ? (
-                      <Badge size="sm" color="warning">
-                        {hold}
-                      </Badge>
-                    ) : (
-                      <Badge size="sm" color={contentIntent(item) === "explore" ? "brand" : "gray"}>
-                        {CONTENT_INTENT_LABEL[contentIntent(item)]}
-                      </Badge>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {held > 0 && sendable.length > 0 && (
-            <p className="text-xs text-[var(--text-tertiary)] mt-2">
-              Held content stays out of this send. Only Approved content written for clients can go to a client.
-            </p>
-          )}
         </div>
       </div>
 
