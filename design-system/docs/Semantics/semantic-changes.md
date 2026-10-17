@@ -1,3 +1,22 @@
+# Pill tabs hover — 17 Oct 2026
+
+The Tabs pill trigger's hover fill (`Background/Default/Secondary`, Grey 50) sat almost on top of
+the Grey 100 track, so the hover barely showed. It now uses `Overlay/Medium` (Black 12% in light,
+White 8% in dark), which reads clearly on the track in both modes and stays distinct from the
+white Active tab. Text still darkens to `Text/Default/Primary` on hover.
+
+Changed in `figma/components.json` (`Tabs/Trigger/Background/Hover`) and `app/globals.css`
+(`--tabs-trigger-bg-hover`, a hand-written token, not produced by `npm run tokens`).
+Figma: `7.Components` variable `Tabs/Trigger/Background/Hover` repointed to `Overlay/Medium`.
+
+**Line tabs:** hover only darkened the text (Grey 700 → 900), which is hard to see. Hover now also
+draws a 2px neutral underline (`Border/Interactive/Hover`, token `--tabs-indicator-hover`) in the same
+spot as the green active indicator; the active tab shows only its green line. New variable
+`Tabs/Line/Indicator/Hover` in `7.Components` (and `figma/components.json`).
+**Not yet updated in Figma:** the Tabs component's Line / Hover variant doesn't draw the underline yet.
+
+---
+
 # Secondary button hover — 17 Oct 2026
 
 The Brand/Secondary button's hover was too subtle: the fill went from white to Canvas

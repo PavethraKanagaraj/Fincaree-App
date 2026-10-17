@@ -209,6 +209,7 @@
     /* Base */
     --color-white: #ffffff;
     --color-black: #000000;
+    --color-transparent: #ffffff00;
     /* [FC-PRIMITIVES:END] */
 
     /* ----------------------------------------------------------
@@ -1116,7 +1117,7 @@
     --tabs-trigger-text-active:   var(--text-primary);   /* #25282d Active */
     --tabs-trigger-text-disabled: var(--text-disabled);
     --tabs-trigger-icon-disabled: var(--fg-disabled);   /* differs from text-disabled in dark mode */
-    --tabs-trigger-bg-hover:      var(--bg-secondary);
+    --tabs-trigger-bg-hover:      var(--overlay-medium);   /* Black 12% on the Grey 100 track: clearly darker; White 8% in dark */
     --tabs-trigger-bg-active:     var(--bg-primary);      /* #ffffff */
     --tabs-trigger-shadow-active: 0 1px 1px rgba(10,13,18,.08);   /* Figma drop-shadow */
     --tabs-trigger-disabled-opacity: 0.5;                           /* Figma: 50% + disabled text */
@@ -1132,6 +1133,7 @@
 
     /* Line indicator */
     --tabs-indicator-active:      var(--fg-brand-primary);  /* #2f7d6b */
+    --tabs-indicator-hover:       var(--border-interactive-hover);   /* neutral underline on hover, Line style */
     --tabs-indicator-h:           2px;
 
     /* ── Avatar ─────────────────────────────────────────────────
@@ -3759,8 +3761,26 @@
     height:  var(--tabs-trigger-h);
     padding: var(--tabs-trigger-line-pt) var(--tabs-trigger-line-px) var(--tabs-trigger-line-pb);
   }
+  .fc-tabs-trigger-line { position: relative; }
+  /* Hover: a neutral underline in the same spot as the active indicator, so the
+     hover is visible without competing with the green active line. */
+  .fc-tabs-trigger-line::after {
+    content:          "";
+    position:         absolute;
+    left:             0;
+    right:            0;
+    bottom:           0;
+    height:           var(--tabs-indicator-h);
+    border-radius:    var(--radius-full);
+    background-color: transparent;
+    pointer-events:   none;
+    transition:       background-color 150ms ease;
+  }
   .fc-tabs-trigger-line:hover:not([data-disabled]) {
     color: var(--tabs-trigger-text-hover);
+  }
+  .fc-tabs-trigger-line:hover:not([data-disabled]):not([data-active])::after {
+    background-color: var(--tabs-indicator-hover);
   }
   .fc-tabs-trigger-line[data-active] {
     color: var(--tabs-trigger-text-active);
@@ -4281,4 +4301,12 @@
        horizontal overscroll chain to browser back-navigation. */
     overscroll-behavior-x: contain;
   }
+}
+
+/* ── Breakpoints ─────────────────────────────────────────── */
+/* Match Figma "4.Screen widths": 2XL is 1440, 3XL is 1600. Tailwind's
+   defaults (1536) made 2xl: switch later than the design shows. */
+@theme {
+  --breakpoint-2xl: 1440px;
+  --breakpoint-3xl: 1600px;
 }

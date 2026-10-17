@@ -29,6 +29,16 @@ const PEOPLE = [
   src: `/avatars/${name.toLowerCase().replace(" ", "-")}.jpg`,
 }));
 
+/* Separate portraits for the Group and Label group stories, so they don't repeat
+   the faces used elsewhere on the page. Placeholder photos from randomuser.me,
+   saved locally in public/avatars; replace with real portraits when available. */
+const portrait = (name: string) => ({ name, src: `/avatars/${name.toLowerCase().replace(" ", "-")}.jpg` });
+const GROUP_PEOPLE = [
+  "Hana Mori", "Tomas Reyes", "Priya Nair", "Marcus Bell", "Sofia Marin",
+  "Daniel Ortiz", "Chloe Dubois", "Arjun Mehta", "Ines Alvarez", "Kofi Mensah",
+].map(portrait);
+const LABEL_PEOPLE = ["Zara Whitfield", "Leo Brandt", "Nadia Karim", "Owen Parker"].map(portrait);
+
 const SIZES: AvatarSize[] = ["xs", "sm", "md", "lg", "xl", "2xl"];
 const onClick = fn().mockName("onClick");
 
@@ -117,7 +127,7 @@ export const Group: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {(["xs", "sm", "md"] as const).map((size) => (
+      {(["xs", "sm", "md"] as const).map((size, row) => (
         <AvatarGroup
           key={size}
           size={size}
@@ -125,7 +135,8 @@ export const Group: Story = {
           aria-label={`Advisors on this account (${size})`}
           action={<AvatarAddButton size={size} tooltip="Add advisor" />}
         >
-          {PEOPLE.map((p) => (
+          {/* Each row starts on a different face, so the sizes don't all repeat the same portraits. */}
+          {[...GROUP_PEOPLE.slice(row * 3), ...GROUP_PEOPLE.slice(0, row * 3)].map((p) => (
             <Avatar key={p.name} size={size} src={p.src} alt={p.name} />
           ))}
         </AvatarGroup>
@@ -155,14 +166,14 @@ export const LabelGroup: Story = {
           avatar={
             <Avatar
               size={avatar}
-              src={PEOPLE[0].src}
+              src={LABEL_PEOPLE[i].src}
               alt=""
               status={i === 1 ? "online" : undefined}
               verified={i === 2}
             />
           }
-          name="Olivia Rhye"
-          subtitle="olivia@fincaree.com"
+          name={LABEL_PEOPLE[i].name}
+          subtitle={`${LABEL_PEOPLE[i].name.split(" ")[0].toLowerCase()}@fincaree.com`}
         />
       ))}
     </div>

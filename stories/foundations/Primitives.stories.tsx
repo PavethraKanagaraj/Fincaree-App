@@ -58,7 +58,7 @@ const SECONDARY = familiesOf(colors.Secondary, (f, s) => (f ? `--color-${f.toLow
 const OVERLAY = familiesOf(colors.Overlay, (f, s) =>
   f === "White" ? `--color-overlay-white-${s.replace(/\D+/g, "")}` : f === "Black" ? `--color-overlay-${s.replace(/\D+/g, "")}` : null
 );
-const BASE = familiesOf(colors.Base, (_f, s) => (/white/i.test(s) ? "--color-white" : /black/i.test(s) ? "--color-black" : null));
+const BASE = familiesOf(colors.Base, (_f, s) => (/white/i.test(s) ? "--color-white" : /black/i.test(s) ? "--color-black" : /transparent/i.test(s) ? "--color-transparent" : null));
 
 /* ---- helpers ---- */
 

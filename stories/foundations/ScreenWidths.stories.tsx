@@ -4,7 +4,7 @@ import { Page, Section, Table, mono } from "./_shared";
 
 /* Figma "4.Screen widths" is the source. There are no --screen-* CSS
    variables: responsive layout in code uses Tailwind's breakpoints, so
-   those are compared here instead (Tailwind v4 defaults). */
+   those are compared here instead (Tailwind v4 defaults, with 2xl and 3xl set to match Figma). */
 
 const TOKENS = Object.entries(screens as Record<string, unknown>)
   .filter(([k]) => !k.startsWith("$"))
@@ -13,8 +13,9 @@ const TOKENS = Object.entries(screens as Record<string, unknown>)
     return { name: k, key: k.split("/")[1]!.toLowerCase(), value: t.$value, description: t.$description ?? "" };
   });
 
-// Tailwind v4 default breakpoints — what `sm:` … `2xl:` resolve to in code.
-const TAILWIND: Record<string, number> = { sm: 640, md: 768, lg: 1024, xl: 1280, "2xl": 1536 };
+// What `sm:` … `3xl:` resolve to in code: Tailwind v4 defaults, with 2xl and 3xl
+// overridden in app/globals.css to match Figma. Keep the two in step.
+const TAILWIND: Record<string, number> = { sm: 640, md: 768, lg: 1024, xl: 1280, "2xl": 1440, "3xl": 1600 };
 const MAX = Math.max(...TOKENS.map((t) => t.value));
 
 function ScreenWidths() {

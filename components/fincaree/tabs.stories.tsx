@@ -194,3 +194,59 @@ export const Matrix: Story = {
     </div>
   ),
 };
+
+/* ── Hover state ──
+   Hover is CSS-only (:hover), so these apply the hover tokens directly, the way the
+   Button story does. Pill: darker fill + dark text. Line: dark text + a neutral
+   underline where the green active line sits. */
+
+const HOVER_PILL = { background: "var(--tabs-trigger-bg-hover)", color: "var(--tabs-trigger-text-hover)" } as const;
+const HOVER_LINE = { color: "var(--tabs-trigger-text-hover)" } as const;
+
+export const HoverState: Story = {
+  name: "Hover state",
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)" }}>
+          pill · default / hover / active
+        </span>
+        <Tabs variant="pill" defaultValue="history">
+          <TabsList aria-label="Pill tabs, hover shown">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="profile" style={HOVER_PILL}>Profile (hover)</TabsTrigger>
+            <TabsTrigger value="history">History (active)</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)" }}>
+          line · default / hover / active
+        </span>
+        <Tabs variant="line" defaultValue="history">
+          <TabsList aria-label="Line tabs, hover shown">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="profile" style={HOVER_LINE}>
+              Profile (hover)
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: "var(--tabs-indicator-h)",
+                  borderRadius: "var(--radius-full)",
+                  background: "var(--tabs-indicator-hover)",
+                }}
+              />
+            </TabsTrigger>
+            <TabsTrigger value="history">History (active)</TabsTrigger>
+            <TabsIndicator />
+          </TabsList>
+        </Tabs>
+      </div>
+    </div>
+  ),
+};

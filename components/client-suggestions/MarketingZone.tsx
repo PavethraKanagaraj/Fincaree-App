@@ -18,19 +18,16 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/fincaree/badge";
-import { Button } from "@/components/fincaree/button";
 import { Input } from "@/components/fincaree/input";
 import { Switch } from "@/components/fincaree/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/fincaree/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Ban, CalendarClock, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Megaphone, MessageSquareText, PhoneCall, Search, ShieldCheck, UserCheck } from "lucide-react";
+import { DataTable, type DataTableColumn } from "@/components/fincaree/data-table";
+import { Ban, CalendarClock, CheckCircle2, ChevronDown, Megaphone, MessageSquareText, PhoneCall, Search, ShieldCheck, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type ContentItem } from "./content-data";
-import { NURTURE_RULES, NURTURE_SEQUENCES, holdReason, isSendableToLeads, type NurtureSequence } from "./delivery-data";
+import { NURTURE_RULES, NURTURE_SEQUENCES, holdReason, isSendableToLeads, type NurtureLead, type NurtureSequence } from "./delivery-data";
 import { getTypeVisual, typeLabel } from "./content-visual";
 
-const LEADS_PER_PAGE = 8;
-type LeadFilter = "all" | "waiting" | "finished";
 type SeqFilter = "all" | "sending" | "paused";
 
 const pct = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
@@ -230,18 +227,42 @@ function SequenceDetail({
   const blocked = steps.filter((s) => !s.item || !isSendableToLeads(s.item));
   const maxSent = Math.max(...steps.map((s) => s.sent), 1);
 
-  const [leadQuery, setLeadQuery] = useState("");
-  const [leadFilter, setLeadFilter] = useState<LeadFilter>("all");
-  const [page, setPage] = useState(0);
-  const filteredLeads = seq.leadList.filter(
-    (l) =>
-      l.name.toLowerCase().includes(leadQuery.trim().toLowerCase()) &&
-      (leadFilter === "all" || (leadFilter === "finished") === l.sentCount >= seq.steps.length),
-  );
-  const pageCount = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
-  const safePage = Math.min(page, pageCount - 1);
-  const from = safePage * LEADS_PER_PAGE;
-  const pageLeads = filteredLeads.slice(from, from + LEADS_PER_PAGE);
+
+  const leadColumns: DataTableColumn<NurtureLead>[] = [
+    {
+      id: "lead",
+      header: "Lead",
+      cell: (l) => (
+        <>
+          <p className="text-sm font-medium text-[var(--text-primary)]">{l.name}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">{l.source}</p>
+        </>
+      ),
+    },
+    { id: "joined", header: "Joined", width: "w-28", className: "text-sm text-[var(--text-secondary)] tabular-nums", cell: (l) => l.joined },
+    {
+      id: "sent",
+      header: "Messages sent",
+      width: "w-40",
+      cell: (l) => (
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+            <span className="block h-full rounded-full bg-[var(--bg-brand-primary)]" style={{ width: `${pct(l.sentCount, seq.steps.length)}%` }} />
+          </span>
+          <span className="text-xs text-[var(--text-secondary)] tabular-nums whitespace-nowrap">
+            {l.sentCount} of {seq.steps.length}
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: "next",
+      header: "Next message",
+      width: "w-36",
+      className: "text-sm text-[var(--text-secondary)] tabular-nums",
+      cell: (l) => (l.sentCount >= seq.steps.length ? "Finished" : isPaused ? "On hold" : (l.nextSend ?? "On hold")),
+    },
+  ];
 
   return (
     <article aria-label={seq.name} className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)]">
@@ -331,107 +352,38 @@ function SequenceDetail({
         </p>
       </div>
 
-      {/* Leads inside: search, filter and page, so it stays usable at any size */}
+      {/* Leads inside: the shared table searches, filters and pages, so it stays usable at any size */}
       <div className="border-t border-[var(--border-tertiary)]">
-        <div className="flex items-end justify-between gap-3 flex-wrap px-5 pt-4 pb-3">
-          <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-              Leads in this sequence <span className="font-normal text-[var(--text-tertiary)]">· {seq.leads}</span>
-            </h4>
-            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-              {seq.converted} lead{seq.converted === 1 ? "" : "s"} from this sequence became clients and left it.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-[200px]">
-              <Input
-                size="sm"
-                aria-label="Search leads"
-                placeholder="Search leads…"
-                value={leadQuery}
-                onChange={(e) => {
-                  setLeadQuery(e.target.value);
-                  setPage(0);
-                }}
-                leadingIcon={<Search size={14} strokeWidth={1.75} />}
-              />
-            </div>
-            <Tabs
-              value={leadFilter}
-              onValueChange={(v) => {
-                setLeadFilter(v as LeadFilter);
-                setPage(0);
-              }}
-              variant="pill"
-            >
-              <TabsList aria-label="Filter leads">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="waiting">In progress</TabsTrigger>
-                <TabsTrigger value="finished">Finished</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="px-5 py-2.5 text-xs text-[var(--text-tertiary)] font-medium">Lead</TableHead>
-              <TableHead className="px-3 py-2.5 text-xs text-[var(--text-tertiary)] font-medium w-28">Joined</TableHead>
-              <TableHead className="px-3 py-2.5 text-xs text-[var(--text-tertiary)] font-medium w-40">Messages sent</TableHead>
-              <TableHead className="px-3 pr-5 py-2.5 text-xs text-[var(--text-tertiary)] font-medium w-36">Next message</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pageLeads.map((lead) => {
-              const done = lead.sentCount >= seq.steps.length;
-              return (
-                <TableRow key={lead.id}>
-                  <TableCell className="px-5 py-3">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{lead.name}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">{lead.source}</p>
-                  </TableCell>
-                  <TableCell className="px-3 py-3 text-sm text-[var(--text-secondary)] tabular-nums">{lead.joined}</TableCell>
-                  <TableCell className="px-3 py-3">
-                    <div className="flex items-center gap-2">
-                      <span aria-hidden="true" className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-                        <span
-                          className="block h-full rounded-full bg-[var(--bg-brand-primary)]"
-                          style={{ width: `${pct(lead.sentCount, seq.steps.length)}%` }}
-                        />
-                      </span>
-                      <span className="text-xs text-[var(--text-secondary)] tabular-nums whitespace-nowrap">
-                        {lead.sentCount} of {seq.steps.length}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-3 pr-5 py-3 text-sm text-[var(--text-secondary)] tabular-nums">
-                    {done ? "Finished" : isPaused ? "On hold" : (lead.nextSend ?? "On hold")}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {filteredLeads.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="px-5 py-8 text-center text-sm text-[var(--text-tertiary)]">
-                  No leads match.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[var(--border-tertiary)]">
-          <p aria-live="polite" className="text-xs text-[var(--text-secondary)] tabular-nums">
-            {filteredLeads.length === 0 ? "0 leads" : `Showing ${from + 1}–${from + pageLeads.length} of ${filteredLeads.length}`}
+        <div className="px-5 pt-4 pb-3">
+          <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+            Leads in this sequence <span className="font-normal text-[var(--text-tertiary)]">· {seq.leads}</span>
+          </h4>
+          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+            {seq.converted} lead{seq.converted === 1 ? "" : "s"} from this sequence became clients and left it.
           </p>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" iconOnly aria-label="Previous page" leadingIcon={<ChevronLeft size={14} strokeWidth={2} />} disabled={safePage === 0} onClick={() => setPage(safePage - 1)} />
-            <span className="text-xs text-[var(--text-secondary)] tabular-nums">
-              Page {safePage + 1} of {pageCount}
-            </span>
-            <Button variant="secondary" size="sm" iconOnly aria-label="Next page" leadingIcon={<ChevronRight size={14} strokeWidth={2} />} disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} />
-          </div>
         </div>
+        <DataTable
+          bare
+          aria-label={`Leads in ${seq.name}`}
+          rows={seq.leadList}
+          columns={leadColumns}
+          getRowId={(l) => l.id}
+          pageSize={8}
+          noun="leads"
+          search={{ placeholder: "Search leads…", width: "w-[200px]", getText: (l) => [l.name, l.source] }}
+          filters={[
+            {
+              id: "progress",
+              kind: "tabs",
+              label: "Filter leads",
+              options: [
+                { value: "waiting", label: "In progress" },
+                { value: "finished", label: "Finished" },
+              ],
+              match: (l, v) => (v === "finished") === l.sentCount >= seq.steps.length,
+            },
+          ]}
+        />
       </div>
     </article>
   );

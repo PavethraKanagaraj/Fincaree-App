@@ -88,7 +88,7 @@ function primitiveCssName(p) {
   const [group, family, step] = p
   if (group === 'Base') {
     const n = family?.toLowerCase()
-    return n === 'transparent' ? null : `--color-${n}`
+    return `--color-${n}`
   }
   if (group === 'Primary' && step) return `--color-${kebab(family)}-${step}`
   if (group === 'Secondary') return step ? `--color-${kebab(family)}-${step}` : `--color-secondary-${family}`
