@@ -21,6 +21,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/fincaree/button";
+import { ListItem } from "@/components/fincaree/list-item";
 import { Input } from "@/components/fincaree/input";
 import { SelectField, SelectItem, SelectGroup, SelectGroupLabel } from "@/components/fincaree/select";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "@/components/fincaree/tabs";
@@ -83,7 +84,7 @@ import {
 import { Modal, ModalContent, ModalTitle, ModalDescription } from "@/components/ui/modal";
 import { Switch } from "@/components/fincaree/switch";
 import { cn } from "@/lib/utils";
-import { Plus, Search, FlaskConical, Presentation, SlidersHorizontal, Route, Maximize2, Send, Library, Inbox, Megaphone, ScrollText, Check } from "lucide-react";
+import { Plus, Search, FlaskConical, Presentation, SlidersHorizontal, Route, Maximize2, Send, Library, Inbox, Megaphone, ScrollText } from "lucide-react";
 
 const TODAY = "18 Sep 2026";
 
@@ -1047,31 +1048,18 @@ export default function ContentStudioPage() {
                       const tile = typeTile(t);
                       return (
                         <li key={t}>
-                          <button
-                            type="button"
-                            role="radio"
-                            aria-checked={on}
-                            aria-disabled={Boolean(reason)}
-                            disabled={Boolean(reason)}
-                            title={reason ?? undefined}
+                          <ListItem
+                            icon={tile.icon}
+                            tileClassName={tile.className}
+                            selected={on}
+                            disabledReason={reason ?? undefined}
                             onClick={() => {
                               setCreateType(t);
                               setCreateIntent(t === "simulation" ? "explore" : "learn");
                             }}
-                            className={cn(
-                              "group flex items-center gap-3 w-full px-5 py-2.5 text-left transition-colors",
-                              reason ? "cursor-not-allowed" : on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]"
-                            )}
                           >
-                            {/* The white ring keeps the tinted tile distinct from the grey hover and the brand-tinted selected row. */}
-                            <span className={cn("w-8 h-8 rounded-[var(--radius-md)] shrink-0 flex items-center justify-center ring-2 ring-transparent transition-shadow", reason ? "bg-[var(--bg-secondary)] text-[var(--text-disabled)]" : cn(tile.className, on ? "ring-[var(--bg-primary)]" : "group-hover:ring-[var(--bg-primary)]"))}>{tile.icon}</span>
-                            <span className={cn("flex-1 text-sm font-medium", reason ? "text-[var(--text-disabled)]" : "text-[var(--text-primary)]")}>{CONTENT_TYPE_LABEL[t]}</span>
-                            {reason ? (
-                              <span className="text-xs text-[var(--text-disabled)]">{reason}</span>
-                            ) : on ? (
-                              <Check size={14} strokeWidth={2.5} className="text-[var(--icon-brand-primary)]" />
-                            ) : null}
-                          </button>
+                            {CONTENT_TYPE_LABEL[t]}
+                          </ListItem>
                         </li>
                       );
                     })}
