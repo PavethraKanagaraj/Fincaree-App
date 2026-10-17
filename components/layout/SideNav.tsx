@@ -19,6 +19,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/fincaree/tooltip";
+import { CONTENT_ITEMS } from "@/components/client-suggestions/content-data";
+import { needsCheckCount, seedContentItems } from "@/components/client-suggestions/delivery-data";
 
 const RAIL_WIDTH = 64;
 const EXPANDED_WIDTH = 240;
@@ -43,13 +45,18 @@ interface NavItem {
 /* Icon language matches the rest of the app on purpose: simulations use
    the same FlaskConical and workshops the same Presentation as the
    Content Studio cards, so an icon means one thing everywhere. */
+/* Content waiting on the advisor (Draft + Needs fixes) — the same number as the
+   "Needs check" tab. Read from the seed data, so it doesn't move live as the
+   advisor works on the page. */
+const NEEDS_CHECK = needsCheckCount(seedContentItems(CONTENT_ITEMS));
+
 export const navItems: NavItem[] = [
   { label: "Dashboard",     href: "/home",               icon: <LayoutDashboard size={18} strokeWidth={1.75} /> },
   { label: "Leads",         href: "/leads",              icon: <UserPlus size={18} strokeWidth={1.75} /> },
   { label: "Clients",       href: "/client-profile",     icon: <Users size={18} strokeWidth={1.75} /> },
   { label: "Meetings",      href: "/meetings",           icon: <Calendar size={18} strokeWidth={1.75} /> },
   { label: "Reports",       href: "/reports",            icon: <FileText size={18} strokeWidth={1.75} /> },
-  { label: "Content Management", href: "/content-management", icon: <Library size={18} strokeWidth={1.75} /> },
+  { label: "Content Management", href: "/content-management", icon: <Library size={18} strokeWidth={1.75} />, badge: NEEDS_CHECK > 0 ? String(NEEDS_CHECK) : undefined },
   { label: "Simulations",   href: "/simulations",        icon: <FlaskConical size={18} strokeWidth={1.75} /> },
   { label: "Workshops",     href: "/workshops",          icon: <Presentation size={18} strokeWidth={1.75} /> },
   { label: "Opportunities", href: "/opportunities",      icon: <BarChart3 size={18} strokeWidth={1.75} /> },

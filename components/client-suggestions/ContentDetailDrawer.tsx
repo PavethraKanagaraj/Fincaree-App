@@ -20,10 +20,24 @@ import { Badge } from "@/components/fincaree/badge";
 import { Avatar } from "@/components/fincaree/avatar";
 import { cn } from "@/lib/utils";
 import type { ContentItem, Client, ClientPlan, Topic, EngagementState4, LifeStage, AdvisoryContext, FinnySuggestion, AuditEntry, ClientGoalPlan } from "./content-data";
+import {
+  CHECKS_BY_TYPE,
+  CONTENT_INTENT_LABEL,
+  audienceOf,
+  blockingOpenCount,
+  contentIntent,
+  contentStatus,
+  contentTypeKey,
+  isAiLabelled,
+  issueSeverity,
+  reviewByLabel,
+  type TypeCheck,
+} from "./delivery-data";
+import { AiTag, AudienceTag, StatusChip } from "./ContentTags";
+import { Input } from "@/components/fincaree/input";
+import { Modal, ModalContent, ModalTitle, ModalDescription } from "@/components/ui/modal";
 import { SimulationStudio } from "./SimulationStudio";
 import {
-  COMPLIANCE_STATUS_LABEL,
-  PUBLICATION_STATUS_LABEL,
   TOPIC_LABEL,
   ADVISORY_STAGE_LABEL,
   COMPLIANCE_CHECK_LABEL,
@@ -31,15 +45,16 @@ import {
   ENGAGEMENT_STATE_LABEL,
   LIFE_STAGE_LABEL,
   ADVISORY_CONTEXT_LABEL,
-  passedCheckCount,
   openIssueCount,
   AUDIT_ACTION_LABEL,
 } from "./content-data";
-import { COMPLIANCE_BADGE_COLOR, PUBLICATION_BADGE_COLOR, getTypeVisual, typeLabel, itemMeta } from "./content-visual";
+import { getTypeVisual, typeLabel, itemMeta } from "./content-visual";
 import {
   Sparkles,
   Check,
   AlertTriangle,
+  Minus,
+  CircleDashed,
   ShieldCheck,
   Eye,
   Pencil,
@@ -49,6 +64,8 @@ import {
   UsersRound,
   ArrowRight,
   X,
+  RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 
 export type DrawerTab = "overview" | "simulation" | "compliance" | "assignments" | "engagement";
@@ -62,8 +79,12 @@ interface ContentDetailDrawerProps {
   suggestions: FinnySuggestion[];
   auditLog: AuditEntry[];
   onAcceptSuggestion: (itemId: string, issueId: string) => void;
-  onDismissSuggestion: (itemId: string, issueId: string) => void;
+  /** Advisory flags only, and always with a reason. */
+  onOverrideFlag: (itemId: string, issueId: string, reason: string) => void;
   onApproveForUse: (itemId: string) => void;
+  onRunCheck: (itemId: string) => void;
+  /** Editing an approved item sends it back to Draft. */
+  onRemoveApproval: (itemId: string) => void;
   onAssign: (itemId: string, clientIds: string[]) => void;
   onSaveSimDefaults: (itemId: string, values: Record<string, number>) => void;
   onPersonalizeSim: (itemId: string, plan: ClientGoalPlan) => void;
@@ -77,7 +98,7 @@ function tabsFor(item: ContentItem): { id: DrawerTab; label: string }[] {
   return [
     { id: "overview", label: "Overview" },
     ...(item.category === "simulation" ? ([{ id: "simulation", label: "Simulation" }] as const) : []),
-    { id: "compliance", label: "AI Compliance" },
+    { id: "compliance", label: "Check" },
     { id: "assignments", label: "Assignments" },
     { id: "engagement", label: "Engagement" },
   ];
@@ -162,155 +183,248 @@ function OverviewTab({ item, history }: { item: ContentItem; history: AuditEntry
   );
 }
 
-/* ─────────── AI Compliance ─────────── */
-function ComplianceTab({
+/* ─────────── Check panel ───────────
+   The check runs automatically on save and again before send. It helps the
+   advisor review; it never approves. Blocking flags stop Approve, advisory
+   flags don't, and an advisory flag can be overridden with a reason (logged).
+   ─────────────────────────────────────────────────────────────────────── */
+function CheckStateRow({ label, state }: { label: string; state: "pass" | "flag" | "confirm" | "unchecked" | "na" }) {
+  const icon =
+    state === "pass" ? (
+      <Check size={13} strokeWidth={2.5} style={{ color: "var(--check-pass-icon)" }} />
+    ) : state === "flag" ? (
+      <AlertTriangle size={13} strokeWidth={2} style={{ color: "var(--check-advisory-icon)" }} />
+    ) : state === "na" ? (
+      <Minus size={13} strokeWidth={2} className="text-[var(--icon-quaternary)]" />
+    ) : (
+      <CircleDashed size={13} strokeWidth={2} className="text-[var(--icon-tertiary)]" />
+    );
+  const text = { pass: "Passed", flag: "Flagged", confirm: "You confirm", unchecked: "Not checked", na: "Not applicable" }[state];
+  return (
+    <li className="flex items-center gap-2 py-2 border-b border-[var(--border-tertiary)] last:border-0">
+      <span className="shrink-0">{icon}</span>
+      <span className={cn("flex-1 text-xs", state === "na" ? "text-[var(--text-tertiary)]" : state === "flag" ? "font-semibold text-[var(--text-primary)]" : "text-[var(--text-secondary)]")}>
+        {label}
+      </span>
+      <span className="text-xs text-[var(--text-tertiary)]">{text}</span>
+    </li>
+  );
+}
+
+function CheckPanel({
   item,
+  history,
   onAccept,
-  onDismiss,
+  onOverride,
   onApprove,
+  onRunCheck,
+  onSaveDraft,
 }: {
   item: ContentItem;
+  history: AuditEntry[];
   onAccept: (issueId: string) => void;
-  onDismiss: (issueId: string) => void;
+  onOverride: (issueId: string, reason: string) => void;
   onApprove: () => void;
+  onRunCheck: () => void;
+  onSaveDraft: () => void;
 }) {
   const review = item.compliance;
-  const passed = passedCheckCount(review);
-  const openIssues = openIssueCount(review);
-  const isApproved = review.status === "approved-for-use";
-  const notReviewed = review.status === "not-reviewed";
-  const readyForDecision = !isApproved && !notReviewed && openIssues === 0;
+  const status = contentStatus(item);
+  const checked = review.status !== "not-reviewed";
+  const blocking = blockingOpenCount(item);
+  const openAdvisory = review.issues.filter((i) => i.resolution === "open" && issueSeverity(i) === "advisory").length;
+  const [overrideId, setOverrideId] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+
+  /* The checklist: this type's checks first, then the rest as not applicable. */
+  const typeChecks = CHECKS_BY_TYPE[contentTypeKey(item)];
+  const stateOf = (c: TypeCheck): "pass" | "flag" | "confirm" | "unchecked" => {
+    if (!c.source) return "confirm";
+    if (review.issues.some((i) => i.checkId === c.source && i.resolution === "open")) return "flag";
+    return checked ? "pass" : "unchecked";
+  };
+  const covered = new Set<string>([...typeChecks.map((c) => c.source ?? ""), ...review.issues.map((i) => i.checkId)]);
+  const notApplicable = ALL_CHECK_IDS.filter((id) => !covered.has(id));
+
+  /* Audit trail: created, the log entries for this item, and expiry. */
+  const trail: { when: string; what: string; detail?: string }[] = [
+    { when: item.createdOn, what: "Created", detail: isAiLabelled(item) ? "AI-assisted" : undefined },
+    ...history.map((e) => ({ when: e.timestamp, what: AUDIT_ACTION_LABEL[e.action], detail: e.detail })),
+    ...(status === "expired" ? [{ when: reviewByLabel(item), what: "Expired", detail: "Past its review-by date" }] : []),
+  ];
+
+  const approveHelp = !checked
+    ? "Run the check before approving."
+    : blocking > 0
+      ? `Fix ${blocking} blocking flag${blocking === 1 ? "" : "s"} to approve.`
+      : openAdvisory > 0
+        ? `${openAdvisory} advisory flag${openAdvisory === 1 ? "" : "s"} still open — you can approve with ${openAdvisory === 1 ? "it" : "them"} open.`
+        : "Nothing is blocking approval.";
 
   return (
     <div className="space-y-5">
-      {/* Finny review header */}
-      <div className="-mx-4 -mt-4 px-4 py-4 bg-[var(--bg-brand-subtle)]">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Sparkles size={13} strokeWidth={1.75} className="text-[var(--icon-brand-primary)]" />
-          <p className="text-xs font-semibold text-[var(--text-brand-primary)]">Finny AI Compliance Review</p>
-        </div>
-        {notReviewed ? (
-          <p className="text-xs text-[var(--text-brand-secondary)]">This content hasn&apos;t been checked yet. Run a review to see findings.</p>
-        ) : (
-          <>
-            <Badge size="sm" color={COMPLIANCE_BADGE_COLOR[review.status]}>{COMPLIANCE_STATUS_LABEL[review.status]}</Badge>
-            <p className="text-xs text-[var(--text-brand-secondary)] mt-2">
-              {passed} of {ALL_CHECK_IDS.length} checks passed
-              {openIssues > 0 && ` · ${openIssues} item${openIssues > 1 ? "s" : ""} need${openIssues > 1 ? "" : "s"} advisor review`}
+      {/* Status + run again */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <StatusChip status={status} />
+            <span className="text-xs text-[var(--text-tertiary)]">
+              {checked ? `Checked${review.checkedAt ? ` on ${review.checkedAt}` : ""}` : "Not checked yet"}
+            </span>
+          </div>
+          {review.ref && <p className="text-xs font-mono text-[var(--text-tertiary)] mt-1.5">{review.ref}</p>}
+          {status === "approved" && (
+            <p className="text-xs text-[var(--text-secondary)] mt-1.5">
+              Approved by {review.approvedBy} · {review.approvedAt} · until {reviewByLabel(item)}
             </p>
-            {review.ref && <p className="text-xs font-mono text-[var(--text-brand-secondary)] mt-1">{review.ref} · {review.checkedAt}</p>}
-          </>
-        )}
+          )}
+          {status === "expired" && (
+            <p className="text-xs mt-1.5" style={{ color: "var(--content-status-expired-text)" }}>
+              Expired on {reviewByLabel(item)}. Run the check and approve again to renew it.
+            </p>
+          )}
+        </div>
+        <Button variant="secondary" size="sm" leadingIcon={<RefreshCw size={13} strokeWidth={1.75} />} onClick={onRunCheck}>
+          Run check again
+        </Button>
       </div>
 
-      {/* The seven checks */}
-      {!notReviewed && (
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Checks</p>
-          <div className="space-y-0">
-            {ALL_CHECK_IDS.map((id) => {
-              const failed = review.failedChecks.includes(id);
-              return (
-                <div key={id} className="flex items-center gap-2 py-1.5 border-b border-[var(--border-tertiary)] last:border-0">
-                  {failed ? (
-                    <AlertTriangle size={12} strokeWidth={2} className="text-[var(--icon-status-warning)] shrink-0" />
-                  ) : (
-                    <Check size={12} strokeWidth={2.5} className="text-[var(--icon-status-success)] shrink-0" />
-                  )}
-                  <span className={cn("text-xs", failed ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-secondary)]")}>
-                    {COMPLIANCE_CHECK_LABEL[id]}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Checklist */}
+      <div>
+        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Checks for this type</p>
+        <ul>
+          {typeChecks.map((c) => (
+            <CheckStateRow key={c.id} label={c.label} state={stateOf(c)} />
+          ))}
+          {notApplicable.map((id) => (
+            <CheckStateRow key={id} label={COMPLIANCE_CHECK_LABEL[id]} state="na" />
+          ))}
+        </ul>
+        <p className="text-xs text-[var(--text-tertiary)] mt-1.5">Placeholder rules by type — confirm them with a compliance professional before relying on them.</p>
+      </div>
 
-      {/* Issues — original text vs Finny's suggested rewrite */}
+      {/* Flags */}
       {review.issues.length > 0 && (
         <div>
-          <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Findings</p>
-          <div className="divide-y divide-[var(--border-tertiary)]">
+          <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Flags</p>
+          <ul className="divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
             {review.issues.map((issue) => {
-              const resolved = issue.resolution !== "open";
+              const open = issue.resolution === "open";
+              const sev = issueSeverity(issue);
               return (
-                <div
-                  key={issue.id}
-                  className={cn(
-                    "-mx-4 px-4 py-3.5",
-                    !resolved && "bg-[var(--bg-status-warning-subtle)]"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <AlertTriangle size={12} strokeWidth={2} className={cn("shrink-0", resolved ? "text-[var(--icon-tertiary)]" : "text-[var(--icon-status-warning)]")} />
-                      <p className="text-xs font-semibold text-[var(--text-primary)]">{issue.title}</p>
-                    </div>
-                    {resolved && (
-                      <Badge size="sm" color={issue.resolution === "accepted" ? "success" : "gray"}>
-                        {issue.resolution === "accepted" ? "Accepted" : "Dismissed"}
+                <li key={issue.id} className="py-3.5">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{issue.title}</p>
+                    {open ? (
+                      <Badge size="sm" color={sev === "blocking" ? "error" : "warning"}>
+                        {sev === "blocking" ? "Blocking" : "Advisory"}
+                      </Badge>
+                    ) : (
+                      <Badge size="sm" color={issue.resolution === "overridden" ? "gray" : "success"}>
+                        {issue.resolution === "overridden" ? "Overridden" : "Fixed"}
                       </Badge>
                     )}
                   </div>
-                  {issue.location && <p className="text-xs text-[var(--text-tertiary)] mb-2">{issue.location}</p>}
+                  {issue.location && <p className="text-xs text-[var(--text-tertiary)] mb-1.5">{issue.location}</p>}
+                  <p
+                    className="text-xs text-[var(--text-primary)] rounded-[var(--radius-sm)] px-2 py-1.5 mb-2"
+                    style={{ background: open ? (sev === "blocking" ? "var(--check-blocking-bg)" : "var(--check-advisory-bg)") : "var(--bg-secondary)" }}
+                  >
+                    &ldquo;{issue.original}&rdquo;
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    <span className="font-semibold text-[var(--text-primary)]">Suggested fix: </span>
+                    &ldquo;{issue.suggestion}&rdquo;
+                  </p>
+                  {issue.resolution === "overridden" && issue.overrideReason && (
+                    <p className="text-xs text-[var(--text-tertiary)] mt-1.5">Reason: {issue.overrideReason}</p>
+                  )}
 
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-0.5">Original</p>
-                      <p className="text-xs text-[var(--text-secondary)] italic">&ldquo;{issue.original}&rdquo;</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[var(--text-brand-primary)] mb-0.5">Finny suggestion</p>
-                      <p className="text-xs text-[var(--text-primary)]">&ldquo;{issue.suggestion}&rdquo;</p>
-                    </div>
-                  </div>
-
-                  {!resolved && (
+                  {open && overrideId !== issue.id && (
                     <div className="flex items-center gap-2 mt-3">
-                      <Button variant="secondary" size="sm" leadingIcon={<Pencil size={11} strokeWidth={2} />}>Edit Content</Button>
-                      <Button variant="primary" size="sm" onClick={() => onAccept(issue.id)}>Accept Suggestion</Button>
-                      <Button variant="tertiary" size="sm" onClick={() => onDismiss(issue.id)}>Dismiss</Button>
+                      <Button variant="primary" size="sm" onClick={() => onAccept(issue.id)}>
+                        Accept fix
+                      </Button>
+                      {sev === "advisory" ? (
+                        <Button variant="secondary" size="sm" onClick={() => { setOverrideId(issue.id); setReason(""); }}>
+                          Override flag
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-[var(--text-tertiary)]">Blocking flags can&apos;t be overridden — fix it to approve.</span>
+                      )}
                     </div>
                   )}
-                </div>
+                  {open && overrideId === issue.id && (
+                    <div className="mt-3 space-y-2">
+                      <Input
+                        size="sm"
+                        label="Reason for overriding (required)"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        placeholder="Why this flag doesn't apply"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={reason.trim().length === 0}
+                          onClick={() => { onOverride(issue.id, reason.trim()); setOverrideId(null); }}
+                        >
+                          Override flag
+                        </Button>
+                        <Button variant="tertiary" size="sm" onClick={() => setOverrideId(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       )}
 
-      {/* Advisor decision — the only place approval happens */}
-      <div className="pt-5 border-t border-[var(--border-tertiary)]">
-        <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Advisor Review</p>
-        {isApproved ? (
-          <div className="flex items-start gap-2">
-            <ShieldCheck size={15} strokeWidth={2} className="text-[var(--icon-status-success)] shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Approved for Use</p>
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                Approved by {review.approvedBy} · {review.approvedAt}
-              </p>
-            </div>
-          </div>
-        ) : readyForDecision ? (
-          <>
-            <p className="text-xs text-[var(--text-secondary)] mb-3">Ready for your decision — all AI findings have been resolved.</p>
-            <Button variant="primary" size="sm" className="w-full" leadingIcon={<ShieldCheck size={13} strokeWidth={2} />} onClick={onApprove}>
-              Approve for Use
-            </Button>
-          </>
-        ) : (
-          <p className="text-xs text-[var(--text-tertiary)]">
-            {notReviewed
-              ? "Run an AI compliance review before approving."
-              : `Resolve ${openIssues} open finding${openIssues > 1 ? "s" : ""} before approving.`}
-          </p>
-        )}
+      {/* Advisor actions */}
+      <div className="pt-4 border-t border-[var(--border-tertiary)]">
+        <p className="text-xs text-[var(--text-secondary)] mb-3">{approveHelp}</p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            leadingIcon={<ShieldCheck size={13} strokeWidth={2} />}
+            disabled={!checked || blocking > 0 || status === "approved"}
+            onClick={onApprove}
+          >
+            {status === "expired" ? "Approve again" : status === "approved" ? "Approved" : "Approve"}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onSaveDraft}>
+            Save as draft
+          </Button>
+        </div>
       </div>
 
+      {/* Audit trail */}
+      <details className="group border-t border-[var(--border-tertiary)] pt-3">
+        <summary className="flex items-center justify-between cursor-pointer list-none text-xs font-semibold text-[var(--text-secondary)]">
+          Audit trail
+          <ChevronDown size={14} strokeWidth={2} className="text-[var(--icon-tertiary)] transition-transform group-open:rotate-180" />
+        </summary>
+        <ol className="mt-2 space-y-2">
+          {trail.map((e, i) => (
+            <li key={i} className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--text-primary)]">{e.what}</p>
+                {e.detail && <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{e.detail}</p>}
+              </div>
+              <span className="text-xs text-[var(--text-tertiary)] shrink-0 whitespace-nowrap">{e.when}</span>
+            </li>
+          ))}
+        </ol>
+      </details>
+
       <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
-        AI provides a compliance pre-check. Final approval remains with the advisor.
+        Checks help you review. You remain responsible for what you publish.
       </p>
     </div>
   );
@@ -594,14 +708,17 @@ export function ContentDetailDrawer({
   suggestions,
   auditLog,
   onAcceptSuggestion,
-  onDismissSuggestion,
+  onOverrideFlag,
   onApproveForUse,
+  onRunCheck,
+  onRemoveApproval,
   onAssign,
   onSaveSimDefaults,
   onPersonalizeSim,
   initialTab,
 }: ContentDetailDrawerProps) {
   const [tab, setTab] = useState<DrawerTab>("overview");
+  const [confirmEdit, setConfirmEdit] = useState(false);
   /* Each time the drawer opens (or switches item) with an initialTab, start
      there. Adjusted during render rather than in an effect. */
   const openKey = open && initialTab ? `${item?.id}|${initialTab}` : null;
@@ -634,15 +751,28 @@ export function ContentDetailDrawer({
                 {typeLabel(item)} · {TOPIC_LABEL[item.topic]}
               </p>
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                <Badge size="sm" color={COMPLIANCE_BADGE_COLOR[item.compliance.status]}>{COMPLIANCE_STATUS_LABEL[item.compliance.status]}</Badge>
-                <Badge size="sm" color={PUBLICATION_BADGE_COLOR[item.publication]}>{PUBLICATION_STATUS_LABEL[item.publication]}</Badge>
+                <StatusChip status={contentStatus(item)} />
+                <AudienceTag audience={audienceOf(item)} />
+                <span className="text-xs text-[var(--text-tertiary)]">{CONTENT_INTENT_LABEL[contentIntent(item)]}</span>
+                {isAiLabelled(item) && <AiTag />}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2 mt-3">
             <Button variant="secondary" size="sm" leadingIcon={<Eye size={13} strokeWidth={1.75} />}>Preview</Button>
-            <Button variant="secondary" size="sm" leadingIcon={<Pencil size={13} strokeWidth={1.75} />}>Edit</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              leadingIcon={<Pencil size={13} strokeWidth={1.75} />}
+              onClick={() => {
+                /* Editing approved content removes the approval, so ask first. */
+                const s = contentStatus(item);
+                if (s === "approved" || s === "expired") setConfirmEdit(true);
+              }}
+            >
+              Edit
+            </Button>
             <Button variant="tertiary" size="sm" iconOnly leadingIcon={<MoreHorizontal size={15} strokeWidth={2} />} aria-label="More actions" />
           </div>
         </SheetHeader>
@@ -679,11 +809,14 @@ export function ContentDetailDrawer({
             <SimulationStudio key={item.id} item={item} onSaveDefaults={onSaveSimDefaults} onPersonalize={onPersonalizeSim} />
           )}
           {activeTab === "compliance" && (
-            <ComplianceTab
+            <CheckPanel
               item={item}
+              history={auditLog.filter((e) => e.itemName === item.title)}
               onAccept={(issueId) => onAcceptSuggestion(item.id, issueId)}
-              onDismiss={(issueId) => onDismissSuggestion(item.id, issueId)}
+              onOverride={(issueId, reason) => onOverrideFlag(item.id, issueId, reason)}
               onApprove={() => onApproveForUse(item.id)}
+              onRunCheck={() => onRunCheck(item.id)}
+              onSaveDraft={() => onOpenChange(false)}
             />
           )}
           {activeTab === "assignments" && (
@@ -692,6 +825,30 @@ export function ContentDetailDrawer({
           {activeTab === "engagement" && <EngagementTab item={item} />}
         </div>
       </SheetContent>
+
+      <Modal open={confirmEdit} onOpenChange={setConfirmEdit}>
+        <ModalContent className="max-w-[400px]">
+          <div className="px-5 pt-5 pb-4 pr-14">
+            <ModalTitle>Edit this content?</ModalTitle>
+            <ModalDescription className="mt-0.5">Editing will remove approval. Continue?</ModalDescription>
+          </div>
+          <div className="flex justify-end gap-2 px-5 pb-5">
+            <Button variant="tertiary" size="sm" onClick={() => setConfirmEdit(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                onRemoveApproval(item.id);
+                setConfirmEdit(false);
+              }}
+            >
+              Continue
+            </Button>
+          </div>
+        </ModalContent>
+      </Modal>
     </Sheet>
   );
 }

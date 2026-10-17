@@ -1,0 +1,47 @@
+/* ============================================================
+   Content Management — semantic tokens
+
+   Content status, audience, check severity and the AI label each get
+   their own semantic names, so the page never reaches for a status or
+   brand token directly. Every value aliases an existing semantic token,
+   so light and dark mode (and their contrast) follow the design system.
+
+   NOTE: these are not in the Figma variable collections or in
+   design-system/figma/ yet. Create them there too (same names, same
+   aliases) so the file and the code stay in step — `npm run tokens`
+   does not generate this file.
+   ============================================================ */
+
+:root {
+  /* Content status — Draft · Needs fixes · Approved · Expired */
+  --content-status-draft-bg: var(--bg-secondary);
+  --content-status-draft-text: var(--text-tertiary);
+  --content-status-needs-fixes-bg: var(--bg-status-warning-subtle);
+  --content-status-needs-fixes-text: var(--text-status-warning);
+  --content-status-needs-fixes-icon: var(--icon-status-warning);
+  --content-status-approved-bg: var(--bg-status-success-subtle);
+  --content-status-approved-text: var(--text-status-success);
+  --content-status-approved-icon: var(--icon-status-success);
+  --content-status-expired-bg: var(--bg-status-error-subtle);
+  --content-status-expired-text: var(--text-status-error);
+  --content-status-expired-icon: var(--icon-status-error);
+
+  /* Audience — who the content is for */
+  --audience-clients-dot: var(--icon-status-info);
+  --audience-leads-dot: var(--icon-brand-primary);
+  --audience-public-dot: var(--icon-tertiary);
+
+  /* Check severity — what a flag does to approval */
+  --check-blocking-bg: var(--bg-status-error-subtle);
+  --check-blocking-text: var(--text-status-error);
+  --check-blocking-icon: var(--icon-status-error);
+  --check-advisory-bg: var(--bg-status-warning-subtle);
+  --check-advisory-text: var(--text-status-warning);
+  --check-advisory-icon: var(--icon-status-warning);
+  --check-pass-text: var(--text-status-success);
+  --check-pass-icon: var(--icon-status-success);
+
+  /* AI label — written or assisted by AI */
+  --ai-label-bg: var(--bg-brand-subtle);
+  --ai-label-icon: var(--icon-brand-primary);
+}

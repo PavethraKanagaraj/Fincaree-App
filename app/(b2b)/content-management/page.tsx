@@ -24,10 +24,35 @@ import { Button } from "@/components/fincaree/button";
 import { Input } from "@/components/fincaree/input";
 import { SelectField, SelectItem, SelectGroup, SelectGroupLabel } from "@/components/fincaree/select";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "@/components/fincaree/tabs";
-import { ContentTable, followUpCount } from "@/components/client-suggestions/ContentTable";
+import { ContentTable, followUpCount, type LibraryTab } from "@/components/client-suggestions/ContentTable";
 import { ContentDetailDrawer, type DrawerTab } from "@/components/client-suggestions/ContentDetailDrawer";
 import { SequenceBuilder, type SequenceSendPayload } from "@/components/client-suggestions/SequenceBuilder";
 import { AssignContentDrawer } from "@/components/client-suggestions/AssignContentDrawer";
+import { ReviewQueue, type ResolvedSend } from "@/components/client-suggestions/ReviewQueue";
+import { MarketingZone, PostMeetingStarter, SendLog, type PackageStart } from "@/components/client-suggestions/DeliveryPanels";
+import {
+  REVIEW_QUEUE,
+  SEND_TRIGGER_LABEL,
+  CONTENT_AUDIENCE_HINT,
+  CONTENT_AUDIENCE_LABEL,
+  CONTENT_INTENT_LABEL,
+  CONTENT_TYPE_GROUPS,
+  CONTENT_TYPE_LABEL,
+  assuredReturnLanguage,
+  blockingOpenCount,
+  contentStatus,
+  contentTypeKey,
+  isSendableToClients,
+  issueSeverity,
+  needsCheckCount,
+  seedContentItems,
+  typeDisabledReason,
+  type ContentAudience,
+  type ContentIntent,
+  type ContentTypeKey,
+  type MeetingRef,
+  type ReviewQueueItem,
+} from "@/components/client-suggestions/delivery-data";
 import { getFormatVisual } from "@/components/client-suggestions/content-visual";
 import {
   CONTENT_ITEMS,
@@ -35,9 +60,6 @@ import {
   FINNY_SUGGESTIONS,
   AUDIT_LOG,
   TOPIC_LABEL,
-  COMPLIANCE_STATUS_LABEL,
-  PUBLICATION_STATUS_LABEL,
-  LEARNING_FORMAT_LABEL,
   CREATED_VIA_LABEL,
   AUDIENCE_LABEL,
   DELIVERY_CHANNEL_LABEL,
@@ -46,12 +68,9 @@ import {
   engagementBand,
   defaultVariables,
   draftPersonalizedModel,
-  openIssueCount,
   type ContentItem,
-  type LearningFormat,
   type Topic,
   type ComplianceStatus,
-  type PublicationStatus,
   type CreatedVia,
   type Audience,
   type EngagementBand,
@@ -61,8 +80,9 @@ import {
   type DeliveryChannel,
 } from "@/components/client-suggestions/content-data";
 import { Modal, ModalContent, ModalTitle, ModalDescription } from "@/components/ui/modal";
+import { Switch } from "@/components/fincaree/switch";
 import { cn } from "@/lib/utils";
-import { Plus, Sparkles, Search, FlaskConical, Presentation, X, SlidersHorizontal, AlertTriangle, FileEdit, Users, TrendingUp, Route, Maximize2, ChevronRight, Send, Library } from "lucide-react";
+import { Plus, Search, FlaskConical, Presentation, SlidersHorizontal, Route, Maximize2, Send, Library, Inbox, Megaphone, ScrollText, Check } from "lucide-react";
 
 const TODAY = "18 Sep 2026";
 
@@ -71,7 +91,7 @@ const TODAY = "18 Sep 2026";
    Sequence Builder. Managing the library (review, drafts, engagement) is
    periodic work and lives in its own view, with a count of what needs
    review so that time-sensitive compliance work is never out of sight. */
-type PageView = "send" | "library";
+type PageView = "queue" | "send" | "library" | "marketing" | "log";
 
 /* ─── Type tabs (Library view) — "what kind of content am I looking for?" ─── */
 type TypeTab = "all" | "learning" | "simulations" | "workshops";
@@ -83,24 +103,20 @@ const TYPE_TABS: { id: TypeTab; label: string }[] = [
   { id: "workshops", label: "Workshops" },
 ];
 
-/* ─── Quick views — work states, not tabs ─── */
-type QuickView = "none" | "needs-review" | "drafts" | "assigned";
+/* ─── Status tabs — "can I send this?" ───
+   Four statuses only: Draft, Needs fixes, Approved, Expired. The tabs group
+   them by what the advisor does next, and combine with the type filter. */
+const STATUS_TABS: { id: LibraryTab; label: string }[] = [
+  { id: "ready", label: "Ready to send" },
+  { id: "needs-check", label: "Needs check" },
+  { id: "expired", label: "Expired" },
+  { id: "all", label: "All" },
+];
 
-/* ─── Flat type filter (§5 — doesn't duplicate the tabs) ─── */
-type TypeFilter = "all" | LearningFormat | "simulation" | "workshop";
+/* ─── Type filter — reads the same canonical list as the Create modal ─── */
+type TypeFilter = "all" | ContentTypeKey;
 
-const TYPE_FILTER_LABEL: Record<TypeFilter, string> = {
-  all: "All types",
-  video: "Video",
-  pdf: "PDF",
-  course: "Course",
-  "image-post": "Image Post",
-  simulation: "Simulation",
-  workshop: "Workshop",
-};
-
-/* ─── Status filter — grouped, since review ≠ publication ─── */
-type StatusFilter = "all" | ComplianceStatus | PublicationStatus;
+const TYPE_FILTER_LABEL: Record<TypeFilter, string> = { all: "All types", ...CONTENT_TYPE_LABEL };
 
 /* ─── Assignment filter (§8) ─── */
 type AssignmentFilter = "all" | "not-assigned" | "assigned" | "partially-assigned";
@@ -118,18 +134,17 @@ type CreatedWindow = keyof typeof CREATED_WINDOW_LABEL;
 const SORT_LABELS = { latest: "Latest", "most-assigned": "Most Assigned", "most-engaged": "Most Engaged" };
 type SortKey = keyof typeof SORT_LABELS;
 
-const COMPLIANCE_KEYS = Object.keys(COMPLIANCE_STATUS_LABEL) as ComplianceStatus[];
-const PUBLICATION_KEYS = Object.keys(PUBLICATION_STATUS_LABEL) as PublicationStatus[];
-
-function needsReview(item: ContentItem): boolean {
-  return item.compliance.status !== "approved-for-use";
-}
 
 function matchesTypeFilter(item: ContentItem, f: TypeFilter): boolean {
-  if (f === "all") return true;
-  if (f === "simulation") return item.category === "simulation";
-  if (f === "workshop") return item.category === "workshop";
-  return item.category === "learning" && item.format === f;
+  return f === "all" || contentTypeKey(item) === f;
+}
+
+function inStatusTab(item: ContentItem, tab: LibraryTab): boolean {
+  const status = contentStatus(item);
+  if (tab === "ready") return status === "approved";
+  if (tab === "needs-check") return status === "draft" || status === "needs-fixes";
+  if (tab === "expired") return status === "expired";
+  return true;
 }
 
 function daysSince(dateStr: string): number {
@@ -140,15 +155,14 @@ function daysSince(dateStr: string): number {
 
 /* ════════════════════════════════════════════════ */
 export default function ContentStudioPage() {
-  const [items, setItems] = useState<ContentItem[]>(CONTENT_ITEMS);
+  const [items, setItems] = useState<ContentItem[]>(() => seedContentItems(CONTENT_ITEMS));
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(AUDIT_LOG);
 
   const [tab, setTab] = useState<TypeTab>("all");
-  const [quickView, setQuickView] = useState<QuickView>("none");
+  const [statusTab, setStatusTab] = useState<LibraryTab>("ready");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [topicFilter, setTopicFilter] = useState<Topic | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [sort, setSort] = useState<SortKey>("latest");
 
@@ -163,6 +177,11 @@ export default function ContentStudioPage() {
   const [selected, setSelected] = useState<ContentItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  /* Create flow: audience first, because it decides the rules; then type; then settings. */
+  const [createAudience, setCreateAudience] = useState<ContentAudience>("clients");
+  const [createType, setCreateType] = useState<ContentTypeKey | null>(null);
+  const [createIntent, setCreateIntent] = useState<ContentIntent>("learn");
+  const [createAi, setCreateAi] = useState(false);
 
   /* Multi-select exists for one reason: order matters across several items,
      which is the Learning Path case. */
@@ -173,35 +192,37 @@ export default function ContentStudioPage() {
 
   /* The expanded workspace. Opens over the studio rather than navigating
      away, so the advisor keeps their filters and selection. */
-  const [view, setView] = useState<PageView>("send");
+  const [view, setView] = useState<PageView>("queue");
   /* Sequence Builder seed — a new nonce re-applies the selection. */
-  const [builderSeed, setBuilderSeed] = useState<{ ids: string[]; nonce: number }>({ ids: [], nonce: 0 });
+  const [builderSeed, setBuilderSeed] = useState<{
+    ids: string[];
+    nonce: number;
+    title?: string;
+    note?: string;
+    clientId?: string;
+    meeting?: MeetingRef;
+  }>({ ids: [], nonce: 0 });
+
+  /* Review queue — AI-suggested sends waiting for the advisor's decision. */
+  const [pendingQueue, setPendingQueue] = useState<ReviewQueueItem[]>(REVIEW_QUEUE);
+  const [resolvedQueue, setResolvedQueue] = useState<ResolvedSend[]>([]);
   const [drawerTab, setDrawerTab] = useState<DrawerTab | undefined>(undefined);
 
-  /* Preview — how the client sees it. */
-  const [previewItem, setPreviewItem] = useState<ContentItem | null>(null);
 
-  /* ── Quick-view counts ── */
-  const counts = useMemo(() => {
-    const review = items.filter(needsReview);
-    const needsChanges = review.filter((i) => i.compliance.status === "changes-required").length;
-    const drafts = items.filter((i) => i.publication === "draft");
-    const incompleteDrafts = drafts.filter((i) => i.compliance.status === "not-reviewed").length;
-    const assigned = items.filter((i) => i.engagement.assignedCount > 0);
-    const rates = items.map((i) => i.engagement.completionRate).filter((r): r is number => r !== null);
-    const avgEngagement = rates.length ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
-    const followUps = assigned.reduce((sum, i) => sum + followUpCount(i), 0);
-    return {
-      review: review.length,
-      needsChanges,
-      drafts: drafts.length,
-      incompleteDrafts,
-      assigned: assigned.length,
-      avgEngagement,
-      followUps,
-      total: items.length,
-    };
-  }, [items]);
+  /* The Needs check count is the same number the nav badge shows. */
+  const needsCheck = useMemo(() => needsCheckCount(items), [items]);
+
+  /* When each item last went out, read from the send log. */
+  const lastSent = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of auditLog) {
+      if (e.action !== "assigned" && e.action !== "send-approved") continue;
+      const when = e.timestamp.split(" · ")[0];
+      const titles = e.itemName.split(" + ");
+      for (const it of items) if (titles.includes(it.title)) m.set(it.id, when === "Just now" ? "Today" : when);
+    }
+    return m;
+  }, [auditLog, items]);
 
   const tabCounts = useMemo(
     () => ({
@@ -227,6 +248,16 @@ export default function ContentStudioPage() {
   const activeFilterCount =
     (createdWindow !== "all" ? 1 : 0) + (createdVia !== "all" ? 1 : 0) + (engBand !== "all" ? 1 : 0) + (stageFilter !== "all" ? 1 : 0) + (audienceFilter !== "all" ? 1 : 0);
 
+  /* Tab counts follow the type selection, so they match what the table would show. */
+  const statusCounts = useMemo(() => {
+    const scoped = items.filter(
+      (i) =>
+        (tab === "all" || (tab === "learning" && i.category === "learning") || (tab === "simulations" && i.category === "simulation") || (tab === "workshops" && i.category === "workshop")) &&
+        matchesTypeFilter(i, typeFilter)
+    );
+    return Object.fromEntries(STATUS_TABS.map((t) => [t.id, scoped.filter((i) => inStatusTab(i, t.id)).length])) as Record<LibraryTab, number>;
+  }, [items, tab, typeFilter]);
+
   const visible = useMemo(() => {
     let list = items;
 
@@ -235,21 +266,10 @@ export default function ContentStudioPage() {
     else if (tab === "simulations") list = list.filter((i) => i.category === "simulation");
     else if (tab === "workshops") list = list.filter((i) => i.category === "workshop");
 
-    /* Quick view */
-    if (quickView === "needs-review") list = list.filter(needsReview);
-    else if (quickView === "drafts") list = list.filter((i) => i.publication === "draft");
-    else if (quickView === "assigned") list = list.filter((i) => i.engagement.assignedCount > 0);
-
-    /* Primary filters */
+    /* Type filter, then status tab — both apply, so "Videos that are Ready to send" works. */
     list = list.filter((i) => matchesTypeFilter(i, typeFilter));
+    list = list.filter((i) => inStatusTab(i, statusTab));
     if (topicFilter !== "all") list = list.filter((i) => i.topic === topicFilter);
-    if (statusFilter !== "all") {
-      list = list.filter((i) =>
-        COMPLIANCE_KEYS.includes(statusFilter as ComplianceStatus)
-          ? i.compliance.status === statusFilter
-          : i.publication === statusFilter
-      );
-    }
     if (assignmentFilter === "not-assigned") list = list.filter((i) => i.engagement.assignedCount === 0);
     else if (assignmentFilter === "assigned") list = list.filter((i) => i.engagement.assignedCount > 0);
     else if (assignmentFilter === "partially-assigned") list = list.filter((i) => i.engagement.assignedCount > 0 && followUpCount(i) > 0);
@@ -277,7 +297,7 @@ export default function ContentStudioPage() {
     else if (sort === "most-engaged") sorted.sort((a, b) => (b.engagement.completionRate ?? -1) - (a.engagement.completionRate ?? -1));
     else sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return sorted;
-  }, [items, tab, quickView, typeFilter, topicFilter, statusFilter, assignmentFilter, createdWindow, createdVia, engBand, stageFilter, audienceFilter, search, sort]);
+  }, [items, tab, statusTab, typeFilter, topicFilter, assignmentFilter, createdWindow, createdVia, engBand, stageFilter, audienceFilter, search, sort]);
 
   /* ── Mutations ── */
   const logAudit = useCallback((entry: Omit<AuditEntry, "id" | "timestamp">) => {
@@ -289,39 +309,101 @@ export default function ContentStudioPage() {
     setSelected((prev) => (prev && prev.id === itemId ? fn(prev) : prev));
   }
 
-  /** Resolving the last finding moves to "AI Review Complete" — ready for the
-      advisor's decision, never straight to approved. */
-  function resolveIssue(itemId: string, issueId: string, resolution: "accepted" | "dismissed") {
+  /** Accepting a fix resolves the flag. Resolving the last one leaves the content checked and
+      waiting for the advisor's decision — never straight to approved. */
+  function acceptFix(itemId: string, issueId: string) {
     const item = items.find((i) => i.id === itemId);
     updateItem(itemId, (it) => {
-      const issues = it.compliance.issues.map((x) => (x.id === issueId ? { ...x, resolution } : x));
-      const stillOpen = issues.filter((x) => x.resolution === "open").length;
       const resolvedCheck = it.compliance.issues.find((x) => x.id === issueId)?.checkId;
+      const issues = it.compliance.issues.map((x) => (x.id === issueId ? { ...x, resolution: "accepted" as const } : x));
+      const stillOpen = issues.filter((x) => x.resolution === "open").length;
       return {
         ...it,
         compliance: {
           ...it.compliance,
           issues,
-          failedChecks: resolution === "accepted" && resolvedCheck ? it.compliance.failedChecks.filter((c) => c !== resolvedCheck) : it.compliance.failedChecks,
-          status: stillOpen === 0 ? "ai-review-complete" : it.compliance.status,
+          failedChecks: resolvedCheck ? it.compliance.failedChecks.filter((c) => c !== resolvedCheck) : it.compliance.failedChecks,
+          status: stillOpen === 0 && it.compliance.status !== "approved-for-use" ? "ai-review-complete" : it.compliance.status,
         },
       };
     });
-    logAudit({
-      action: resolution === "accepted" ? "issue-accepted" : "issue-dismissed",
-      itemName: item?.title ?? "Content",
-      actor: "advisor",
-      detail: resolution === "accepted" ? "Finny suggestion accepted" : "Finny suggestion dismissed",
-    });
+    logAudit({ action: "issue-accepted", itemName: item?.title ?? "Content", actor: "advisor", detail: "Fix accepted" });
   }
 
+  /** Advisory flags only — a blocking flag has to be fixed. The reason is required and logged. */
+  function overrideFlag(itemId: string, issueId: string, reason: string) {
+    const item = items.find((i) => i.id === itemId);
+    const issue = item?.compliance.issues.find((x) => x.id === issueId);
+    if (!item || !issue || issueSeverity(issue) === "blocking" || !reason.trim()) return;
+    updateItem(itemId, (it) => {
+      const issues = it.compliance.issues.map((x) => (x.id === issueId ? { ...x, resolution: "overridden" as const, overrideReason: reason } : x));
+      const stillOpen = issues.filter((x) => x.resolution === "open").length;
+      return {
+        ...it,
+        compliance: {
+          ...it.compliance,
+          issues,
+          status: stillOpen === 0 && it.compliance.status !== "approved-for-use" ? "ai-review-complete" : it.compliance.status,
+        },
+      };
+    });
+    logAudit({ action: "flag-overridden", itemName: item.title, actor: "advisor", detail: `Overrode “${issue.title}” — ${reason}` });
+  }
+
+  /** Blocking flags stop approval; advisory flags don't. Approving restarts the review-by clock. */
   function approveForUse(itemId: string) {
+    const item = items.find((i) => i.id === itemId);
+    if (!item || blockingOpenCount(item) > 0) return;
+    updateItem(itemId, (it) => ({
+      ...it,
+      reviewBy: undefined,
+      compliance: { ...it.compliance, status: "approved-for-use", approvedBy: "Anita Sharma", approvedAt: TODAY },
+    }));
+    logAudit({ action: "advisor-approved", itemName: item.title, actor: "advisor", detail: "Approved by Anita Sharma", ref: item.compliance.ref });
+  }
+
+  /** Editing approved content sends it back to Draft and clears the approval. */
+  function removeApproval(itemId: string) {
     const item = items.find((i) => i.id === itemId);
     updateItem(itemId, (it) => ({
       ...it,
-      compliance: { ...it.compliance, status: "approved-for-use", approvedBy: "Anita Sharma", approvedAt: TODAY },
+      reviewBy: undefined,
+      updatedAt: TODAY,
+      compliance: { ...it.compliance, status: "not-reviewed", approvedBy: undefined, approvedAt: undefined },
     }));
-    logAudit({ action: "advisor-approved", itemName: item?.title ?? "Content", actor: "advisor", detail: "Approved by Anita Sharma", ref: item?.compliance.ref });
+    logAudit({ action: "approval-removed", itemName: item?.title ?? "Content", actor: "advisor", detail: "Edited — approval removed, back to Draft" });
+  }
+
+  /** The automatic check. It reads the title and description for outcome promises; the other
+      checks keep their findings. It never approves — it only flags. */
+  function checkedReview(it: ContentItem): ContentItem["compliance"] {
+    const assured = assuredReturnLanguage(`${it.title} ${it.description}`);
+    const known = it.compliance.issues.some((x) => x.checkId === "guaranteed-return-language");
+    const issues = assured && !known
+      ? [...it.compliance.issues, { id: `iss-${Date.now()}`, checkId: "guaranteed-return-language" as const, title: "Promises an outcome", original: assured, suggestion: "Describe what it does without promising a return.", location: "Title or description", resolution: "open" as const }]
+      : it.compliance.issues;
+    const open = issues.filter((x) => x.resolution === "open").length;
+    const wasApproved = it.compliance.status === "approved-for-use";
+    const status: ComplianceStatus =
+      wasApproved && issues === it.compliance.issues ? "approved-for-use" : open > 0 ? "changes-required" : wasApproved ? "approved-for-use" : "ai-review-complete";
+    return {
+      ...it.compliance,
+      issues,
+      failedChecks: assured && !known ? [...it.compliance.failedChecks, "guaranteed-return-language"] : it.compliance.failedChecks,
+      status,
+      ref: it.compliance.ref ?? `COMP-${1100 + Math.floor(Math.random() * 90)}`,
+      checkedAt: TODAY,
+      ...(status === "approved-for-use" ? {} : { approvedBy: undefined, approvedAt: undefined }),
+    };
+  }
+
+  function runCheck(itemId: string) {
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+    const next = checkedReview(item);
+    const open = next.issues.filter((x) => x.resolution === "open").length;
+    updateItem(itemId, (it) => ({ ...it, compliance: checkedReview(it) }));
+    logAudit({ action: "ai-review-run", itemName: item.title, actor: "ai", detail: open > 0 ? `Checked — ${open} open flag${open === 1 ? "" : "s"}` : "Checked — no open flags", ref: next.ref });
   }
 
   function assign(itemId: string, clientIds: string[], channel?: DeliveryChannel, message?: string) {
@@ -408,7 +490,18 @@ export default function ContentStudioPage() {
     setDrawerOpen(true);
   }
 
-  function createDraft(kind: Exclude<TypeFilter, "all">) {
+  /** Opens the Create flow, optionally with a type already picked (audience stays the advisor's call). */
+  function openCreate(type?: ContentTypeKey) {
+    setCreateType(type ?? null);
+    setCreateAudience("clients");
+    setCreateIntent(type === "simulation" ? "explore" : "learn");
+    setCreateAi(false);
+    setCreateOpen(true);
+  }
+
+  /** Starts a Draft. The automatic check runs on save, so the new item arrives already checked
+      — and still needs the advisor's approval before it can be sent. */
+  function createDraft(kind: ContentTypeKey, opts: { audience: ContentAudience; intent: ContentIntent; ai: boolean }) {
     const id = `ct-new-${Date.now()}`;
     const base = {
       id,
@@ -419,6 +512,9 @@ export default function ContentStudioPage() {
       createdBy: "Anita Sharma",
       createdVia: "advisor" as const,
       audience: [],
+      forAudience: opts.audience,
+      intent: opts.intent,
+      aiAssisted: opts.ai,
       createdOn: TODAY,
       updatedAt: TODAY,
       publication: "draft" as const,
@@ -435,17 +531,21 @@ export default function ContentStudioPage() {
         model: { kind: "template", goalTopic: base.topic, variables: defaultVariables(base.topic) },
       };
     else if (kind === "workshop") draft = { ...base, title: "Untitled Workshop", category: "workshop", mode: "online", duration: "—" };
-    else draft = { ...base, title: `Untitled ${LEARNING_FORMAT_LABEL[kind]}`, category: "learning", format: kind };
+    else draft = { ...base, title: `Untitled ${CONTENT_TYPE_LABEL[kind]}`, category: "learning", format: kind };
 
+    draft = { ...draft, compliance: checkedReview(draft) };
     setItems((prev) => [draft, ...prev]);
-    logAudit({ action: "created", itemName: draft.title, actor: "advisor" });
+    logAudit({
+      action: "created",
+      itemName: draft.title,
+      actor: "advisor",
+      detail: `${CONTENT_AUDIENCE_LABEL[opts.audience]} · ${CONTENT_INTENT_LABEL[opts.intent]}${opts.ai ? " · AI-assisted" : ""}`,
+    });
     setCreateOpen(false);
+    setStatusTab("needs-check");
     setSelected(draft);
+    setDrawerTab("compliance");
     setDrawerOpen(true);
-  }
-
-  function toggleQuickView(v: QuickView) {
-    setQuickView((prev) => (prev === v ? "none" : v));
   }
 
   /* ── Selection ── */
@@ -490,46 +590,71 @@ export default function ContentStudioPage() {
       action: "assigned",
       itemName: p.title,
       actor: "advisor",
-      detail: `Learning path of ${p.contentIds.length} item${p.contentIds.length === 1 ? "" : "s"}${p.messages.length ? ` + ${p.messages.length} message${p.messages.length === 1 ? "" : "s"}` : ""} to ${p.clientIds.length} client${p.clientIds.length === 1 ? "" : "s"}${p.note ? ", with a message" : ""}${p.savedAsTemplate ? "; saved as a template" : ""}`,
+      detail: `Learning path of ${p.contentIds.length} item${p.contentIds.length === 1 ? "" : "s"}${p.messages.length ? ` + ${p.messages.length} message${p.messages.length === 1 ? "" : "s"}` : ""} to ${p.clientIds.length} client${p.clientIds.length === 1 ? "" : "s"}${p.note ? ", with a message" : ""}${p.savedAsTemplate ? "; saved as a template" : ""}${p.meeting ? `; follows ${p.meeting.title}, ${p.meeting.date}` : ""}`,
     });
   }
 
-  /* ── KPI / quick-view cards ── */
-  const primaryCards = [
-    {
-      id: "needs-review" as QuickView,
-      label: "Needs Review",
-      value: counts.review,
-      sub: counts.needsChanges > 0 ? `${counts.needsChanges} need changes` : "All findings resolved",
-      icon: <AlertTriangle size={13} strokeWidth={2} />,
-      warn: counts.review > 0,
-    },
-    {
-      id: "drafts" as QuickView,
-      label: "Drafts",
-      value: counts.drafts,
-      sub: counts.incompleteDrafts > 0 ? `${counts.incompleteDrafts} not yet reviewed` : "All reviewed",
-      icon: <FileEdit size={13} strokeWidth={2} />,
-      warn: false,
-    },
-  ];
+  /* ── Review queue decisions ── every one is logged ── */
+  const clientNameOf = (id: string) => CLIENTS.find((c) => c.id === id)?.name ?? "Client";
+  const resolveQueueItem = (q: ReviewQueueItem, r: Omit<ResolvedSend, "id" | "clientName" | "trigger">) => {
+    setPendingQueue((prev) => prev.filter((x) => x.id !== q.id));
+    setResolvedQueue((prev) => [{ id: q.id, clientName: clientNameOf(q.clientId), trigger: q.trigger, ...r }, ...prev]);
+  };
 
-  const secondaryCards = [
-    {
-      id: "assigned" as QuickView,
-      label: "Assigned",
-      value: String(counts.assigned),
-      sub: counts.followUps > 0 ? `${counts.followUps} clients to follow up` : "No follow-ups pending",
-      icon: <Users size={13} strokeWidth={2} />,
-    },
-    {
-      id: "none" as QuickView,
-      label: "Engagement",
-      value: `${counts.avgEngagement}%`,
-      sub: "Average completion",
-      icon: <TrendingUp size={13} strokeWidth={2} />,
-    },
-  ];
+  /** Approving sends only content that is approved for clients and live; the rest is held and logged. */
+  function approveQueueItem(q: ReviewQueueItem, message: string) {
+    const content = q.contentIds.map((id) => items.find((i) => i.id === id)).filter((i): i is ContentItem => Boolean(i));
+    const sendable = content.filter(isSendableToClients);
+    const held = content.filter((i) => !isSendableToClients(i));
+    if (sendable.length === 0) return;
+    for (const item of sendable) assign(item.id, [q.clientId], "portal", message || undefined);
+    const name = clientNameOf(q.clientId);
+    logAudit({
+      action: "send-approved",
+      itemName: sendable.map((i) => i.title).join(" + "),
+      actor: "advisor",
+      detail: `To ${name} · ${SEND_TRIGGER_LABEL[q.trigger]}: ${q.evidence[0]} · approved by Anita Sharma${q.meeting ? ` · follows ${q.meeting.title}, ${q.meeting.date}` : ""}${held.length ? ` · held back: ${held.map((i) => i.title).join(", ")}` : ""}`,
+    });
+    resolveQueueItem(q, {
+      outcome: "sent",
+      detail: `${sendable.length} item${sendable.length === 1 ? "" : "s"} sent via Client Portal${held.length ? `; ${held.length} held back` : ""}`,
+    });
+  }
+
+  function dismissQueueItem(q: ReviewQueueItem, reason: string) {
+    logAudit({
+      action: "send-dismissed",
+      itemName: `${clientNameOf(q.clientId)} — ${SEND_TRIGGER_LABEL[q.trigger]}`,
+      actor: "advisor",
+      detail: reason ? `Dismissed: ${reason}` : "Dismissed, no reason given",
+    });
+    resolveQueueItem(q, { outcome: "dismissed", detail: reason || "No reason given" });
+  }
+
+  /** Opens the suggestion in the composer, so the advisor can change the content before it goes. */
+  function editQueueItem(q: ReviewQueueItem, message: string) {
+    setBuilderSeed((prev) => ({
+      ids: q.contentIds,
+      nonce: prev.nonce + 1,
+      title: q.meeting ? `${q.meeting.title} follow-up` : `${SEND_TRIGGER_LABEL[q.trigger]} for ${clientNameOf(q.clientId)}`,
+      note: message,
+      clientId: q.clientId,
+      meeting: q.meeting,
+    }));
+    setView("send");
+  }
+
+  /** Starts a post-meeting package: the meeting purpose picks the template, the meeting is linked. */
+  function startPackage({ template, clientId, meeting }: PackageStart) {
+    setBuilderSeed((prev) => ({
+      ids: template.contentIds,
+      nonce: prev.nonce + 1,
+      title: template.title,
+      note: template.note,
+      clientId,
+      meeting,
+    }));
+  }
 
   return (
     <AppShell>
@@ -540,23 +665,33 @@ export default function ContentStudioPage() {
         <div className="shrink-0 flex items-start justify-between gap-4 px-6 py-5 bg-[var(--bg-primary)] border-b border-[var(--border-tertiary)]">
           <div>
             <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">Content Management</h1>
-            <p className="text-sm text-[var(--text-tertiary)] mt-0.5">Curate, create and share educational content with your clients.</p>
+            <p className="text-sm text-[var(--text-tertiary)] mt-0.5">Approve what goes to clients, assemble post-meeting packages and manage the content library.</p>
             <Tabs value={view} onValueChange={(v) => setView(v as PageView)} variant="pill" className="mt-4">
               <TabsList aria-label="Content Management view">
-                <TabsTrigger value="send" icon={<Send size={16} strokeWidth={1.75} />}>Send to clients</TabsTrigger>
-                <TabsTrigger value="library" icon={<Library size={16} strokeWidth={1.75} />}>
-                  Library
-                  {counts.review > 0 && (
+                <TabsTrigger value="queue" icon={<Inbox size={16} strokeWidth={1.75} />}>
+                  Review queue
+                  {pendingQueue.length > 0 && (
                     <span className="ml-1 text-xs font-semibold text-[var(--text-status-warning)] bg-[var(--bg-status-warning-subtle)] px-2 py-0.5 rounded-full tabular-nums">
-                      {counts.review} need review
+                      {pendingQueue.length}
                     </span>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="send" icon={<Send size={16} strokeWidth={1.75} />}>Compose &amp; send</TabsTrigger>
+                <TabsTrigger value="library" icon={<Library size={16} strokeWidth={1.75} />}>
+                  Library
+                  {needsCheck > 0 && (
+                    <span className="ml-1 text-xs font-semibold text-[var(--text-status-warning)] bg-[var(--bg-status-warning-subtle)] px-2 py-0.5 rounded-full tabular-nums">
+                      {needsCheck} need check
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="marketing" icon={<Megaphone size={16} strokeWidth={1.75} />}>Marketing</TabsTrigger>
+                <TabsTrigger value="log" icon={<ScrollText size={16} strokeWidth={1.75} />}>Send log</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => setCreateOpen(true)}>
+            <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate()}>
               Create Content
             </Button>
           </div>
@@ -566,6 +701,23 @@ export default function ContentStudioPage() {
           {/* ══ Send to clients — the Sequence Builder ══
               Kept mounted (hidden) so a half-built sequence survives a trip
               to the Library. */}
+          {view === "queue" && (
+            <ReviewQueue
+              pending={pendingQueue}
+              resolved={resolvedQueue}
+              items={items}
+              clients={CLIENTS}
+              onApprove={approveQueueItem}
+              onEdit={editQueueItem}
+              onDismiss={dismissQueueItem}
+            />
+          )}
+          {view === "marketing" && <MarketingZone items={items} />}
+          {view === "log" && <SendLog entries={auditLog} />}
+
+          <div hidden={view !== "send"} className="shrink-0">
+            <PostMeetingStarter clients={CLIENTS} onStart={startPackage} />
+          </div>
           <div hidden={view !== "send"} className="xl:flex-1 xl:min-h-0">
             <SequenceBuilder
               items={items}
@@ -577,63 +729,6 @@ export default function ContentStudioPage() {
           </div>
 
           {view === "library" && (<>
-          {/* ══ Quick views — the KPI row is an operational shortcut, not decoration ══ */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {primaryCards.map((c) => {
-              const active = quickView === c.id;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => toggleQuickView(c.id)}
-                  className={cn(
-                    "text-left rounded-[var(--radius-xl)] border px-5 py-4 transition-colors",
-                    active
-                      ? "border-[var(--border-brand-primary)] bg-[var(--bg-brand-subtle)]"
-                      : c.warn
-                      ? "border-[var(--border-status-warning-subtle)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)]"
-                      : "border-[var(--border-tertiary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)]"
-                  )}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className={cn(c.warn ? "text-[var(--icon-status-warning)]" : "text-[var(--icon-tertiary)]")}>{c.icon}</span>
-                    <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{c.label}</p>
-                  </div>
-                  <p className={cn("text-3xl font-bold mt-1.5 tabular-nums", c.warn ? "text-[var(--text-status-warning)]" : "text-[var(--text-primary)]")}>
-                    {c.value}
-                  </p>
-                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{c.sub}</p>
-                </button>
-              );
-            })}
-
-            {secondaryCards.map((c) => {
-              const clickable = c.id !== "none";
-              const active = clickable && quickView === c.id;
-              return (
-                <button
-                  key={c.label}
-                  type="button"
-                  disabled={!clickable}
-                  onClick={() => clickable && toggleQuickView(c.id)}
-                  className={cn(
-                    "text-left rounded-[var(--radius-xl)] border px-5 py-4 transition-colors",
-                    active ? "border-[var(--border-brand-primary)] bg-[var(--bg-brand-subtle)]" : "border-[var(--border-tertiary)] bg-[var(--bg-primary)]",
-                    clickable && !active && "hover:bg-[var(--bg-secondary)]",
-                    !clickable && "cursor-default"
-                  )}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[var(--icon-tertiary)]">{c.icon}</span>
-                    <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{c.label}</p>
-                  </div>
-                  <p className="text-2xl font-bold text-[var(--text-primary)] mt-1.5 tabular-nums">{c.value}</p>
-                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{c.sub}</p>
-                </button>
-              );
-            })}
-          </div>
-
           {/* ══ Type tabs ══ */}
           <Tabs value={tab} onValueChange={(v) => setTab(v as TypeTab)} variant="line" className="!gap-0">
             <div className="border-b border-[var(--border-tertiary)]">
@@ -675,7 +770,7 @@ export default function ContentStudioPage() {
                 size="sm"
                 className="shrink-0"
                 leadingIcon={<Plus size={14} strokeWidth={2} />}
-                onClick={() => createDraft("simulation")}
+                onClick={() => openCreate("simulation")}
               >
                 Create Template
               </Button>
@@ -685,7 +780,7 @@ export default function ContentStudioPage() {
           {tab === "learning" && (
             <div className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-4 py-3">
               <p className="text-xs text-[var(--text-tertiary)]">Videos, courses, PDFs and image posts you can assign to clients or groups.</p>
-              <Button variant="secondary" size="sm" className="shrink-0" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => setCreateOpen(true)}>
+              <Button variant="secondary" size="sm" className="shrink-0" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate()}>
                 New Learning Content
               </Button>
             </div>
@@ -694,11 +789,25 @@ export default function ContentStudioPage() {
           {tab === "workshops" && (
             <div className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-4 py-3">
               <p className="text-xs text-[var(--text-tertiary)]">Online and offline sessions clients can be invited to.</p>
-              <Button variant="secondary" size="sm" className="shrink-0" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => createDraft("workshop")}>
+              <Button variant="secondary" size="sm" className="shrink-0" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate("workshop")}>
                 Create Workshop
               </Button>
             </div>
           )}
+
+          {/* ══ Status tabs ══
+              "Can I send this?" — Approved content is the default view. Counts are live
+              and follow the type selection above. */}
+          <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as LibraryTab)} variant="pill" className="!gap-0">
+            <TabsList aria-label="Content status">
+              {STATUS_TABS.map((t) => (
+                <TabsTrigger key={t.id} value={t.id}>
+                  {t.label}
+                  <span className="ml-1.5 text-xs font-semibold text-[var(--text-tertiary)] tabular-nums">{statusCounts[t.id]}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           {/* ══ Filters ══ */}
           <div className="space-y-4">
@@ -713,9 +822,15 @@ export default function ContentStudioPage() {
                 />
               </div>
 
-              <SelectField size="sm" className="w-[120px]" aria-label="Type" value={typeFilter} onValueChange={(v: unknown) => setTypeFilter(v as TypeFilter)} items={TYPE_FILTER_LABEL}>
-                {(Object.keys(TYPE_FILTER_LABEL) as TypeFilter[]).map((t) => (
-                  <SelectItem key={t} value={t}>{TYPE_FILTER_LABEL[t]}</SelectItem>
+              <SelectField size="sm" className="w-[148px]" aria-label="Type" value={typeFilter} onValueChange={(v: unknown) => setTypeFilter(v as TypeFilter)} items={TYPE_FILTER_LABEL}>
+                <SelectItem value="all">All types</SelectItem>
+                {CONTENT_TYPE_GROUPS.map((g) => (
+                  <SelectGroup key={g.group}>
+                    <SelectGroupLabel>{g.group}</SelectGroupLabel>
+                    {g.types.map((t) => (
+                      <SelectItem key={t} value={t}>{CONTENT_TYPE_LABEL[t]}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectField>
 
@@ -724,30 +839,6 @@ export default function ContentStudioPage() {
                 {(Object.keys(TOPIC_LABEL) as Topic[]).map((t) => (
                   <SelectItem key={t} value={t}>{TOPIC_LABEL[t]}</SelectItem>
                 ))}
-              </SelectField>
-
-              {/* Status is grouped — review state and publication state are different axes */}
-              <SelectField
-                size="sm"
-                className="w-[168px]"
-                aria-label="Status"
-                value={statusFilter}
-                onValueChange={(v: unknown) => setStatusFilter(v as StatusFilter)}
-                items={{ all: "All statuses", ...COMPLIANCE_STATUS_LABEL, ...PUBLICATION_STATUS_LABEL }}
-              >
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectGroup>
-                  <SelectGroupLabel>Review</SelectGroupLabel>
-                  {COMPLIANCE_KEYS.map((s) => (
-                    <SelectItem key={s} value={s}>{COMPLIANCE_STATUS_LABEL[s]}</SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectGroupLabel>Publication</SelectGroupLabel>
-                  {PUBLICATION_KEYS.map((s) => (
-                    <SelectItem key={s} value={s}>{PUBLICATION_STATUS_LABEL[s]}</SelectItem>
-                  ))}
-                </SelectGroup>
               </SelectField>
 
               <SelectField size="sm" className="w-[152px]" aria-label="Assignment" value={assignmentFilter} onValueChange={(v: unknown) => setAssignmentFilter(v as AssignmentFilter)} items={ASSIGNMENT_LABEL}>
@@ -842,19 +933,9 @@ export default function ContentStudioPage() {
           <div>
             <div className="flex items-center justify-between gap-3 mb-3">
               <p className="text-xs text-[var(--text-tertiary)]">
-                {visible.length} of {counts.total} items
+                {visible.length} item{visible.length === 1 ? "" : "s"}
               </p>
               <div className="flex items-center gap-3">
-                {quickView !== "none" && (
-                  <button
-                    type="button"
-                    onClick={() => setQuickView("none")}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-brand-primary)] hover:underline"
-                  >
-                    Viewing {quickView === "needs-review" ? "Needs Review" : quickView === "drafts" ? "Drafts" : "Assigned"}
-                    <X size={11} strokeWidth={2.5} />
-                  </button>
-                )}
                 {/* Expand — opens the full workspace over the studio */}
                 <button
                   type="button"
@@ -893,12 +974,14 @@ export default function ContentStudioPage() {
               items={visible}
               selectedId={selected?.id ?? null}
               onSelect={(item) => { setSelected(item); setDrawerTab(undefined); setDrawerOpen(true); }}
-              variant={quickView === "assigned" ? "assigned" : "default"}
+              mode={statusTab}
               checkedIds={checkedIds}
               onToggleChecked={toggleChecked}
               onToggleAll={toggleAll}
-              onAssign={(item) => setAssignItem(item)}
-              onPreview={(item) => setPreviewItem(item)}
+              lastSent={lastSent}
+              onSend={(item) => openPathBuilder([item.id])}
+              onReview={(item) => { setSelected(item); setDrawerTab("compliance"); setDrawerOpen(true); }}
+              empty={<LibraryEmpty tab={statusTab} filtered={Boolean(search.trim()) || typeFilter !== "all" || topicFilter !== "all" || assignmentFilter !== "all" || activeFilterCount > 0} onGo={setStatusTab} onCreate={() => openCreate()} />}
             />
           </div>
           </>)}
@@ -913,9 +996,11 @@ export default function ContentStudioPage() {
         clients={CLIENTS}
         suggestions={FINNY_SUGGESTIONS}
         auditLog={auditLog}
-        onAcceptSuggestion={(id, issueId) => resolveIssue(id, issueId, "accepted")}
-        onDismissSuggestion={(id, issueId) => resolveIssue(id, issueId, "dismissed")}
+        onAcceptSuggestion={acceptFix}
+        onOverrideFlag={overrideFlag}
         onApproveForUse={approveForUse}
+        onRunCheck={runCheck}
+        onRemoveApproval={removeApproval}
         onAssign={assign}
         onSaveSimDefaults={saveSimDefaults}
         onPersonalizeSim={personalizeSim}
@@ -929,54 +1014,171 @@ export default function ContentStudioPage() {
           On the shared Modal primitive (focus trap, Escape, scroll lock) and
           laid out as one ruled list — the six types are rows, not tiles. */}
       <Modal open={createOpen} onOpenChange={setCreateOpen}>
-        <ModalContent className="max-w-[440px]">
+        <ModalContent className="max-w-[520px]">
           <div className="shrink-0 border-b border-[var(--border-tertiary)] px-5 pt-5 pb-4 pr-14">
             <ModalTitle>Create Content</ModalTitle>
             <ModalDescription className="mt-0.5">
-              Pick a type to start a draft. It stays un-reviewed until you run a compliance check.
+              Pick who it&apos;s for, then a type. Drafts are checked automatically before they can be sent.
             </ModalDescription>
           </div>
 
           <div className="overflow-y-auto pb-2">
-            {[
-              {
-                group: "Learning",
-                rows: (Object.keys(LEARNING_FORMAT_LABEL) as LearningFormat[]).map((f) => {
-                  const cfg = getFormatVisual(f);
-                  return { key: f as string, label: LEARNING_FORMAT_LABEL[f], icon: cfg.icon, tile: cn(cfg.bgColor, cfg.iconColor), kind: f as Exclude<TypeFilter, "all"> };
-                }),
-              },
-              {
-                group: "Interactive",
-                rows: [{ key: "simulation", label: "Simulation", icon: <FlaskConical size={14} strokeWidth={1.75} />, tile: "bg-[var(--bg-brand-subtle)] text-[var(--icon-brand-primary)]", kind: "simulation" as const }],
-              },
-              {
-                group: "Live",
-                rows: [{ key: "workshop", label: "Workshop", icon: <Presentation size={14} strokeWidth={1.75} />, tile: "bg-[var(--bg-status-success-subtle)] text-[var(--icon-status-success)]", kind: "workshop" as const }],
-              },
-            ].map((g) => (
-              <section key={g.group}>
-                <p className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{g.group}</p>
-                <ul className="divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
-                  {g.rows.map((r) => (
-                    <li key={r.key}>
-                      <button
-                        type="button"
-                        onClick={() => createDraft(r.kind)}
-                        className="group flex items-center gap-3 w-full px-5 py-2.5 text-left hover:bg-[var(--bg-secondary)] transition-colors"
-                      >
-                        <span className={cn("w-8 h-8 rounded-[var(--radius-md)] shrink-0 flex items-center justify-center", r.tile)}>{r.icon}</span>
-                        <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">{r.label}</span>
-                        <ChevronRight size={14} strokeWidth={2} className="text-[var(--icon-tertiary)] group-hover:translate-x-0.5 transition-transform" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
+            {/* Step 1 — audience decides the rules, so it comes first */}
+            <fieldset className="px-5 pt-4">
+              <legend className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Who is it for?</legend>
+              <div role="radiogroup" aria-label="Audience" className="grid grid-cols-3 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] overflow-hidden divide-x divide-[var(--border-tertiary)]">
+                {(Object.keys(CONTENT_AUDIENCE_LABEL) as ContentAudience[]).map((a) => {
+                  const on = createAudience === a;
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => {
+                        setCreateAudience(a);
+                        if (createType && typeDisabledReason(createType, a)) setCreateType(null);
+                      }}
+                      className={cn("px-3 py-2.5 text-left transition-colors", on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]")}
+                    >
+                      <p className={cn("text-sm font-semibold", on ? "text-[var(--text-brand-primary)]" : "text-[var(--text-primary)]")}>{CONTENT_AUDIENCE_LABEL[a]}</p>
+                      <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-snug">{CONTENT_AUDIENCE_HINT[a]}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {/* Step 2 — the one type list; types that don't fit the audience say why */}
+            <div role="radiogroup" aria-label="Content type">
+              {CONTENT_TYPE_GROUPS.map((g) => (
+                <section key={g.group}>
+                  <p className="px-5 pt-4 pb-1.5 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{g.group}</p>
+                  <ul className="divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
+                    {g.types.map((t) => {
+                      const reason = typeDisabledReason(t, createAudience);
+                      const on = createType === t;
+                      const tile = typeTile(t);
+                      return (
+                        <li key={t}>
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            aria-disabled={Boolean(reason)}
+                            disabled={Boolean(reason)}
+                            title={reason ?? undefined}
+                            onClick={() => {
+                              setCreateType(t);
+                              setCreateIntent(t === "simulation" ? "explore" : "learn");
+                            }}
+                            className={cn(
+                              "flex items-center gap-3 w-full px-5 py-2.5 text-left transition-colors",
+                              reason ? "cursor-not-allowed" : on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]"
+                            )}
+                          >
+                            <span className={cn("w-8 h-8 rounded-[var(--radius-md)] shrink-0 flex items-center justify-center", reason ? "bg-[var(--bg-secondary)] text-[var(--text-disabled)]" : tile.className)}>{tile.icon}</span>
+                            <span className={cn("flex-1 text-sm font-medium", reason ? "text-[var(--text-disabled)]" : "text-[var(--text-primary)]")}>{CONTENT_TYPE_LABEL[t]}</span>
+                            {reason ? (
+                              <span className="text-xs text-[var(--text-disabled)]">{reason}</span>
+                            ) : on ? (
+                              <Check size={14} strokeWidth={2.5} className="text-[var(--icon-brand-primary)]" />
+                            ) : null}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+
+            {/* Step 3 — settings, once a type is picked */}
+            {createType && (
+              <div className="px-5 pt-4 space-y-4">
+                <fieldset>
+                  <legend className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Content label <span className="text-[var(--text-status-error)]">*</span></legend>
+                  <div role="radiogroup" aria-label="Content label" className="grid grid-cols-2 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] overflow-hidden divide-x divide-[var(--border-tertiary)]">
+                    {(["learn", "explore"] as ContentIntent[]).map((i) => {
+                      const on = createIntent === i;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setCreateIntent(i)}
+                          className={cn("px-3 py-2.5 text-left transition-colors", on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]")}
+                        >
+                          <p className={cn("text-sm font-semibold", on ? "text-[var(--text-brand-primary)]" : "text-[var(--text-primary)]")}>{CONTENT_INTENT_LABEL[i]}</p>
+                          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{i === "learn" ? "Teaches an idea" : "Lets the client try their own numbers"}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+                <div>
+                  <Switch checked={createAi} onCheckedChange={setCreateAi}>
+                    AI-generated or AI-assisted
+                  </Switch>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1">An AI label is added to the item automatically.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="shrink-0 flex justify-end gap-2 border-t border-[var(--border-tertiary)] px-5 py-3">
+            <Button variant="tertiary" size="sm" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!createType}
+              onClick={() => createType && createDraft(createType, { audience: createAudience, intent: createIntent, ai: createAi })}
+            >
+              Start draft
+            </Button>
           </div>
         </ModalContent>
       </Modal>
     </AppShell>
+  );
+}
+
+/* ─── Create modal: the tile for each type ─── */
+function typeTile(t: ContentTypeKey): { icon: React.ReactNode; className: string } {
+  if (t === "simulation") return { icon: <FlaskConical size={14} strokeWidth={1.75} />, className: "bg-[var(--bg-brand-subtle)] text-[var(--icon-brand-primary)]" };
+  if (t === "workshop") return { icon: <Presentation size={14} strokeWidth={1.75} />, className: "bg-[var(--bg-status-success-subtle)] text-[var(--icon-status-success)]" };
+  const cfg = getFormatVisual(t);
+  return { icon: cfg.icon, className: cn(cfg.bgColor, cfg.iconColor) };
+}
+
+/* ─── One empty state per status tab ─── */
+function LibraryEmpty({ tab, filtered, onGo, onCreate }: { tab: LibraryTab; filtered: boolean; onGo: (t: LibraryTab) => void; onCreate: () => void }) {
+  if (filtered) {
+    return (
+      <>
+        <p className="text-sm font-medium text-[var(--text-secondary)]">No content matches these filters</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Try a different type, topic or search term.</p>
+      </>
+    );
+  }
+  const copy: Record<LibraryTab, { title: string; action?: { label: string; run: () => void } }> = {
+    ready: { title: "Nothing approved yet. Review your drafts.", action: { label: "Go to Needs check", run: () => onGo("needs-check") } },
+    "needs-check": { title: "Everything is checked." },
+    expired: { title: "No expired content." },
+    all: { title: "No content yet.", action: { label: "Create Content", run: onCreate } },
+  };
+  const c = copy[tab];
+  return (
+    <>
+      <p className="text-sm font-medium text-[var(--text-secondary)]">{c.title}</p>
+      {c.action && (
+        <Button variant="secondary" size="sm" className="mt-3" onClick={c.action.run}>
+          {c.action.label}
+        </Button>
+      )}
+    </>
   );
 }

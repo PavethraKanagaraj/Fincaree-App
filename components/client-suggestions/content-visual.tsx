@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import type { BadgeColor } from "@/components/fincaree/badge";
 import type { ContentItem, ComplianceStatus, PublicationStatus, LearningFormat } from "./content-data";
 import { LEARNING_FORMAT_LABEL } from "./content-data";
-import { Play, Layers, Image as ImageIcon, FileText, FlaskConical, Presentation, Globe, MapPin } from "lucide-react";
+import { Play, Layers, Image as ImageIcon, FileText, FlaskConical, Presentation, Globe, MapPin, Route, MonitorPlay, MessageSquare } from "lucide-react";
 
 export const COMPLIANCE_BADGE_COLOR: Record<ComplianceStatus, BadgeColor> = {
   "not-reviewed": "gray",
@@ -40,6 +40,9 @@ const FORMAT_VISUAL: Record<LearningFormat, TypeVisual> = {
   course: { icon: <Layers size={14} strokeWidth={1.75} />, bgColor: "bg-[var(--bg-brand-subtle)]", iconColor: "text-[var(--icon-brand-primary)]", label: "Course" },
   "image-post": { icon: <ImageIcon size={14} strokeWidth={1.75} />, bgColor: "bg-[var(--bg-status-warning-subtle)]", iconColor: "text-[var(--icon-status-warning)]", label: "Image Post" },
   pdf: { icon: <FileText size={14} strokeWidth={1.75} />, bgColor: "bg-[var(--bg-secondary)]", iconColor: "text-[var(--icon-secondary)]", label: "PDF" },
+  "learning-path": { icon: <Route size={14} strokeWidth={1.75} />, bgColor: "bg-[var(--bg-brand-subtle)]", iconColor: "text-[var(--icon-brand-primary)]", label: "Learning path" },
+  presentation: { icon: <MonitorPlay size={14} strokeWidth={1.75} />, bgColor: "bg-[var(--bg-status-warning-subtle)]", iconColor: "text-[var(--icon-status-warning)]", label: "Presentation" },
+  message: { icon: <MessageSquare size={14} strokeWidth={1.75} />, bgColor: "bg-[var(--bg-secondary)]", iconColor: "text-[var(--icon-secondary)]", label: "Message" },
 };
 
 const SIMULATION_VISUAL: TypeVisual = {

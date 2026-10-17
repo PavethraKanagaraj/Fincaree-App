@@ -45,6 +45,7 @@ import {
   DELIVERY_CHANNEL_HINT,
   TOPIC_LABEL,
 } from "./content-data";
+import { adviceLanguage, holdReason, isSendableToClients, type MeetingRef } from "./delivery-data";
 import {
   LEARNING_PATHS,
   insightFor,
@@ -155,13 +156,23 @@ export interface SequenceSendPayload {
   note: string;
   /** Also saved as a reusable learning path template. */
   savedAsTemplate: boolean;
+  /** The meeting this package follows up, when it was started from one. */
+  meeting?: MeetingRef;
 }
 
 interface SequenceBuilderProps {
   items: ContentItem[];
   clients: Client[];
   /** Content ids to start the canvas with; a new `nonce` re-applies them. */
-  seed?: { ids: string[]; nonce: number };
+  seed?: {
+    ids: string[];
+    nonce: number;
+    /** Starting values when a package begins from a meeting or a queued suggestion. */
+    title?: string;
+    note?: string;
+    clientId?: string;
+    meeting?: MeetingRef;
+  };
   onEditSimulation: (item: ContentItem) => void;
   onSend: (payload: SequenceSendPayload) => void;
 }
@@ -169,13 +180,9 @@ interface SequenceBuilderProps {
 let uidCounter = 0;
 const nextUid = () => `step-${++uidCounter}`;
 
-/** Only content a client may receive: compliance-approved and live. */
-function isSendable(item: ContentItem): boolean {
-  return (
-    item.compliance.status === "approved-for-use" &&
-    (item.publication === "published" || item.publication === "scheduled")
-  );
-}
+/** Only Approved content written for subscribed clients can be sent. Everything else
+    stays visible in the picker, greyed out, with the reason. */
+const isSendable = isSendableToClients;
 
 /* ════════════════════════════════════════════════ */
 export function SequenceBuilder({
@@ -203,6 +210,7 @@ export function SequenceBuilder({
   const [steps, setSteps] = useState<Step[]>([]);
   const [description, setDescription] = useState("");
   const [note, setNote] = useState("");
+  const [meeting, setMeeting] = useState<MeetingRef | null>(null);
   const [mode, setMode] = useState<RecipientMode>("client");
   const [clientId, setClientId] = useState<string | null>(null);
   const [groupIds, setGroupIds] = useState<Set<string>>(new Set());
@@ -234,10 +242,17 @@ export function SequenceBuilder({
       .filter((id) => isSendable(byId.get(id)!))
       .map((id): Step => ({ uid: nextUid(), kind: "content", contentId: id }));
     if (add.length) setSteps([...steps, ...add]);
+    if (seed.title !== undefined) setTitle(seed.title);
+    if (seed.note !== undefined) setNote(seed.note);
+    if (seed.clientId) {
+      setMode("client");
+      setClientId(seed.clientId);
+    }
+    setMeeting(seed.meeting ?? null);
     setSent(null);
     setNotice(
       held.length
-        ? `${held.length === 1 ? `“${byId.get(held[0])!.title}” wasn't` : `${held.length} selected items weren't`} added — only approved, published content can be sent. Finish its compliance review first.`
+        ? `${held.length === 1 ? `“${byId.get(held[0])!.title}” wasn't` : `${held.length} selected items weren't`} added — only Approved content written for clients can be sent. Finish its check first.`
         : null,
     );
   }
@@ -464,12 +479,17 @@ export function SequenceBuilder({
   const canSaveTemplate = uniqueContentIds.length >= 2;
   const signature = `${title.trim()}|${uniqueContentIds.join(",")}`;
   const isSaved = savedSignature === signature;
+  /* Education versus advice: a recommendation belongs in the Advice flow. */
+  const adviceHit = adviceLanguage([note, ...messages.map((m) => m.text)].join(" "));
+
   const blocker =
     steps.length === 0
       ? "Add at least one step to the canvas."
       : recipients.length === 0
         ? "Choose who receives this learning path."
-        : null;
+        : adviceHit
+          ? `Your message reads like a recommendation (“${adviceHit}”). Issue it through the Advice flow, or reword it as education.`
+          : null;
 
   function saveTemplate() {
     if (!canSaveTemplate || isSaved) return;
@@ -514,6 +534,7 @@ export function SequenceBuilder({
       channel,
       note: note.trim(),
       savedAsTemplate: isSaved,
+      meeting: meeting ?? undefined,
     });
     setSent(
       `“${name}” is on its way to ${recipientName} — ${summary}, in order, via ${DELIVERY_CHANNEL_LABEL[channel]}${note.trim() ? ", with your message" : ""}.`,
@@ -523,6 +544,7 @@ export function SequenceBuilder({
     setTitle("");
     setDescription("");
     setNote("");
+    setMeeting(null);
     setClientId(null);
     setGroupIds(new Set());
   }
@@ -726,6 +748,20 @@ export function SequenceBuilder({
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+
+          {meeting && (
+            <p className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] mt-2">
+              <span className="font-semibold text-[var(--text-primary)]">Linked to meeting:</span>
+              {meeting.title} · {meeting.date}
+              <button
+                type="button"
+                onClick={() => setMeeting(null)}
+                className="ml-1 text-[var(--text-brand-primary)] font-semibold hover:underline"
+              >
+                Unlink
+              </button>
+            </p>
+          )}
 
           {sent && (
             <div
@@ -1309,7 +1345,7 @@ function ContentTabList({
 }) {
   const sendable = all.filter(isSendable);
   const shown = sendable.filter((i) => matches(i.title));
-  const held = all.length - sendable.length;
+  const held = all.filter((i) => !isSendable(i) && matches(i.title));
 
   return (
     <div className="flex flex-col gap-2">
@@ -1334,18 +1370,35 @@ function ContentTabList({
             />
           );
         })}
-        {shown.length === 0 && (
+        {shown.length === 0 && held.length === 0 && (
           <li className="py-3 text-xs text-[var(--text-tertiary)]">
             {sendable.length === 0
               ? "Nothing approved to send yet."
               : "Nothing matches."}
           </li>
         )}
+        {/* Not sendable — still visible, greyed out, with the reason. */}
+        {held.map((i) => {
+          const v = getTypeVisual(i);
+          return (
+            <li
+              key={i.id}
+              className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-2.5 py-2"
+            >
+              <span className="shrink-0 w-7 h-7 rounded-[var(--radius-md)] flex items-center justify-center bg-[var(--bg-primary)] text-[var(--icon-quaternary)]" aria-hidden="true">
+                {v.icon}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-[var(--text-disabled)] truncate">{i.title}</span>
+                <span className="block text-xs text-[var(--text-tertiary)] truncate">{holdReason(i, "clients")}</span>
+              </span>
+            </li>
+          );
+        })}
       </ul>
-      {held > 0 && (
+      {held.length > 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">
-          {held} more awaiting compliance review — only approved, published
-          content can be sent.
+          Greyed-out items can&apos;t be sent yet — only Approved content written for clients can.
         </p>
       )}
     </div>

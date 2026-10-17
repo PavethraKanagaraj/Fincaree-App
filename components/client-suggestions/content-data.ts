@@ -15,7 +15,7 @@
 /* ---- Taxonomy ---- */
 
 export type ContentCategory = "learning" | "simulation" | "workshop";
-export type LearningFormat = "video" | "course" | "image-post" | "pdf";
+export type LearningFormat = "learning-path" | "course" | "video" | "pdf" | "image-post" | "presentation" | "message";
 export type WorkshopMode = "online" | "offline";
 
 export const CONTENT_CATEGORY_LABEL: Record<ContentCategory, string> = {
@@ -25,10 +25,13 @@ export const CONTENT_CATEGORY_LABEL: Record<ContentCategory, string> = {
 };
 
 export const LEARNING_FORMAT_LABEL: Record<LearningFormat, string> = {
-  video: "Video",
+  "learning-path": "Learning path",
   course: "Course",
-  "image-post": "Image Post",
+  video: "Video",
   pdf: "PDF",
+  "image-post": "Image Post",
+  presentation: "Presentation",
+  message: "Message",
 };
 
 /** Client relevance — also the Topic filter vocabulary. */
@@ -90,6 +93,14 @@ export const COMPLIANCE_STATUS_LABEL: Record<ComplianceStatus, string> = {
 
 export type PublicationStatus = "draft" | "scheduled" | "published" | "archived";
 
+/** Who the content is for. Chosen first, because the audience decides the rules:
+    subscribed-client content, lead marketing and public posts are checked differently,
+    and content for one audience is never sent to another. Unset means "clients". */
+export type ContentAudience = "clients" | "leads" | "public";
+
+/** Learn teaches; Explore lets the client try their own numbers. Never "Advice". */
+export type ContentIntent = "learn" | "explore";
+
 export const PUBLICATION_STATUS_LABEL: Record<PublicationStatus, string> = {
   draft: "Draft",
   scheduled: "Scheduled",
@@ -128,7 +139,9 @@ export interface ComplianceIssue {
   /** Finny's proposed rewrite — a suggestion, never an edit. */
   suggestion: string;
   location?: string;
-  resolution: "open" | "accepted" | "dismissed";
+  resolution: "open" | "accepted" | "dismissed" | "overridden";
+  /** Required when an advisory flag is overridden. Logged. */
+  overrideReason?: string;
 }
 
 export interface ComplianceReview {
@@ -348,6 +361,15 @@ export interface ContentItemBase {
   advisoryStage?: AdvisoryStage;
   publication: PublicationStatus;
   compliance: ComplianceReview;
+  /** Who this is for — see ContentAudience. */
+  forAudience?: ContentAudience;
+  /** Learn or Explore. Unset: simulations explore, everything else teaches. */
+  intent?: ContentIntent;
+  /** Written or assisted by AI — shown as a label on the item. */
+  aiAssisted?: boolean;
+  /** Approval lapses on this date and the item moves to Expired. Unset: approval date
+      plus the review interval. */
+  reviewBy?: string;
   engagement: ContentEngagement;
 }
 
@@ -1228,6 +1250,10 @@ export type AuditAction =
   | "advisor-approved"
   | "published"
   | "assigned"
+  | "send-approved"
+  | "send-dismissed"
+  | "flag-overridden"
+  | "approval-removed"
   | "client-engaged";
 
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
@@ -1239,6 +1265,10 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   "advisor-approved": "Approved by Advisor",
   published: "Published",
   assigned: "Assigned",
+  "send-approved": "Send Approved",
+  "send-dismissed": "Send Dismissed",
+  "flag-overridden": "Flag Overridden",
+  "approval-removed": "Approval Removed",
   "client-engaged": "Client Engaged",
 };
 

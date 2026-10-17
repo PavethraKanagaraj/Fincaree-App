@@ -8,6 +8,9 @@ export type PlanType = "silver" | "gold" | "platinum";
     Journey tracker and the dev prototype switcher, so all three always agree. */
 export type RelationshipStage = "onboarding" | "active-client" | "ongoing-advisory" | "closed";
 
+/** How the relationship is currently doing — shown in the Overview relationship strip. */
+export type RelationshipHealth = "active" | "cooling" | "at-risk";
+
 export interface ClientIdentity {
   id: string;
   clientId: string;
@@ -176,6 +179,20 @@ export interface AdvisoryReadiness {
   pendingBlockers: string[];
 }
 
+export interface ChangeItem {
+  label: string;
+  value: string;
+  tone?: "positive" | "neutral";
+}
+
+/** What moved since the last advisory review — feeds Overview's "What Changed" card. */
+export interface ChangesSinceReview {
+  financial: ChangeItem[];
+  goals: ChangeItem[];
+  newInformation: ChangeItem[];
+  insight: string;
+}
+
 export interface ClientProfileData {
   identity: ClientIdentity;
   financialData: FinancialData;
@@ -187,6 +204,8 @@ export interface ClientProfileData {
   discoveryContext: DiscoveryContext;
   openActions: number;
   lastInteraction: string;
+  relationshipHealth: RelationshipHealth;
+  changesSinceReview: ChangesSinceReview;
   learning: LearningPath[];
   simulations: SimulationRecord[];
   advisoryReadiness: AdvisoryReadiness;
@@ -419,7 +438,17 @@ export const ANIKA_RAO: ClientProfileData = {
     initialGoals: ["Retirement planning", "Child education planning", "Wealth creation"],
   },
   openActions: 3,
-  lastInteraction: "18 Sep 2025",
+  lastInteraction: "22 Aug 2025",
+  relationshipHealth: "active",
+  changesSinceReview: {
+    financial: [{ label: "Portfolio value", value: "+6.2%", tone: "positive" }],
+    goals: [
+      { label: "Retirement target", value: "Age 60 → 58" },
+      { label: "Education goal", value: "₹25L → ₹35L" },
+    ],
+    newInformation: [{ label: "Healthcare expense", value: "New consideration" }],
+    insight: "The revised retirement timeline may affect the funding trajectory — review contribution levels.",
+  },
   advisoryReadiness: {
     kycStatus: "verified",
     panVerified: true,
@@ -474,4 +503,10 @@ export const RELATIONSHIP_STAGE_LABELS: Record<RelationshipStage, string> = {
   "active-client": "Active Client",
   "ongoing-advisory": "Ongoing Advisory",
   closed: "Relationship Closed",
+};
+
+export const RELATIONSHIP_HEALTH_LABELS: Record<RelationshipHealth, string> = {
+  active: "Active",
+  cooling: "Cooling",
+  "at-risk": "At risk",
 };

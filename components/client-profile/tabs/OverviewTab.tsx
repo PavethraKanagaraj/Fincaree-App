@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ClientProfileData, NeedsAttentionItem, TODAY_ISO } from "../client-data";
+import { ChangeItem, ClientProfileData, NeedsAttentionItem, RELATIONSHIP_HEALTH_LABELS, TODAY_ISO } from "../client-data";
 import { CURRENT_ADVICE, ADVICE_STATUS_LABEL } from "../advice-data";
 import { Badge } from "@/components/fincaree/badge";
 import { ArrowRight, CheckCircle2, Calendar, ChevronDown, Sparkles } from "lucide-react";
@@ -12,9 +12,9 @@ interface OverviewTabProps {
 }
 
 const SEVERITY_DOT: Record<NeedsAttentionItem["severity"], string> = {
-  critical: "bg-[var(--color-error-500)]",
-  warning: "bg-[var(--color-warning-500)]",
-  info: "bg-[var(--color-info-500)]",
+  critical: "bg-[var(--bg-status-error-solid)]",
+  warning: "bg-[var(--bg-status-warning-solid)]",
+  info: "bg-[var(--bg-status-info-solid)]",
 };
 
 const GOAL_STATUS_LABEL: Record<string, string> = {
@@ -34,6 +34,20 @@ function daysUntil(dateLabel: string): number | null {
   return Math.round((d.getTime() - new Date(TODAY_ISO).getTime()) / (1000 * 60 * 60 * 24));
 }
 
+function daysAgoLabel(dateLabel: string): string {
+  const d = new Date(dateLabel);
+  if (isNaN(d.getTime())) return dateLabel;
+  const days = Math.round((new Date(TODAY_ISO).getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return dateLabel;
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days <= 30) return `${days} days ago`;
+  return dateLabel;
+}
+
+const changeValueClass = (item: ChangeItem) =>
+  item.tone === "positive" ? "text-[var(--text-status-success)]" : "text-[var(--text-primary)]";
+
 export function OverviewTab({ client, onTabChange }: OverviewTabProps) {
   const daysToMeeting = daysUntil(client.nextMeeting.date);
   const meetingSoon = (daysToMeeting ?? 99) <= 14;
@@ -49,9 +63,9 @@ export function OverviewTab({ client, onTabChange }: OverviewTabProps) {
           {[
             { label: "Client Since", value: client.identity.relationshipSince },
             { label: "Meetings", value: String(meetingsCount) },
-            { label: "Last Interaction", value: "2 days ago" },
+            { label: "Last Interaction", value: daysAgoLabel(client.lastInteraction) },
             { label: "Open Actions", value: String(client.openActions) },
-            { label: "Relationship Health", value: "Active" },
+            { label: "Relationship Health", value: RELATIONSHIP_HEALTH_LABELS[client.relationshipHealth] },
           ].map((item, i) => (
             <div key={item.label} className={`flex-1 min-w-[130px] px-4 ${i > 0 ? "border-l border-[var(--border-tertiary)]" : "pl-0"}`}>
               <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">{item.label}</p>
@@ -104,30 +118,26 @@ export function OverviewTab({ client, onTabChange }: OverviewTabProps) {
           <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-5">
             <h2 className="text-base font-semibold text-[var(--text-primary)] mb-4">What Changed Since Last Review</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-4">
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Financial</p>
-                <p className="text-xs text-[var(--text-secondary)]">Portfolio value</p>
-                <p className="text-sm font-semibold text-[var(--text-status-success)]">+6.2%</p>
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Goals</p>
-                <p className="text-xs text-[var(--text-secondary)]">Retirement target</p>
-                <p className="text-sm font-semibold text-[var(--text-primary)] mb-1.5">Age 60 → 58</p>
-                <p className="text-xs text-[var(--text-secondary)]">Education goal</p>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">₹25L → ₹35L</p>
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">New Information</p>
-                <p className="text-xs text-[var(--text-secondary)]">Healthcare expense</p>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">New consideration</p>
-              </div>
+              {[
+                { title: "Financial", items: client.changesSinceReview.financial },
+                { title: "Goals", items: client.changesSinceReview.goals },
+                { title: "New Information", items: client.changesSinceReview.newInformation },
+              ].map((group) => (
+                <div key={group.title}>
+                  <p className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">{group.title}</p>
+                  {group.items.map((item) => (
+                    <div key={item.label} className="mb-1.5 last:mb-0">
+                      <p className="text-xs text-[var(--text-secondary)]">{item.label}</p>
+                      <p className={`text-sm font-semibold ${changeValueClass(item)}`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
             <div className="flex items-center justify-between gap-3 pt-3 border-t border-[var(--border-tertiary)]">
               <div className="flex items-start gap-2 min-w-0">
                 <Sparkles size={13} className="text-[var(--icon-brand-primary)] mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-[var(--text-secondary)]">
-                  The revised retirement timeline may affect the funding trajectory — review contribution levels.
-                </p>
+                <p className="text-xs text-[var(--text-secondary)]">{client.changesSinceReview.insight}</p>
               </div>
               <button onClick={() => onTabChange("goals-plan")} className="text-xs font-semibold text-[var(--text-brand-primary)] hover:underline flex-shrink-0">
                 Review impact

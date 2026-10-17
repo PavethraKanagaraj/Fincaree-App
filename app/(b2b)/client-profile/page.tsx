@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { ChevronLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "@/components/fincaree/tabs";
 import { ANIKA_RAO } from "@/components/client-profile/client-data";
 import { ClientHeader } from "@/components/client-profile/ClientHeader";
@@ -35,14 +33,6 @@ export default function ClientProfilePage() {
   return (
     <AppShell>
       <div className="px-6 py-6 max-w-[1440px] mx-auto">
-        <Link
-          href="/client-profile"
-          className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors flex items-center gap-1 mb-4 w-fit"
-        >
-          <ChevronLeft size={16} strokeWidth={2} />
-          Clients
-        </Link>
-
         <ClientHeader client={clientData} />
 
         {/* Design-system Tabs: trigger padding, the sliding indicator, arrow-key
