@@ -70,7 +70,7 @@ export const MEETING_STAGES: MeetingStage[] = [
     number: 5,
     label: "Completed",
     statuses: ["completed"],
-    accent: "var(--color-grey-600)",
+    accent: "var(--color-grey-500)",
   },
 ];
 

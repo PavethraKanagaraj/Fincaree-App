@@ -35,7 +35,7 @@ export const PIPELINE_STAGES: PipelineStageInfo[] = [
   { id: "plan-discussion", number: "05", title: "Plan Discussion", type: "touchpoint", typeLabel: "Advisor Touchpoint", typeIcon: MessageCircle, subtitle: "Financial Blueprint meetings", accent: "var(--bg-brand-primary)" },
   { id: "ready-for-advice", number: "04", title: "Ready for Advice", type: "ready", typeLabel: "Ready", typeIcon: CheckCircle2, subtitle: "Sufficient data to create a personalised plan", accent: "var(--color-success-700)" },
   { id: "needs-followup", number: "03", title: "Needs Follow-up", type: "attention", typeLabel: "Needs Attention", typeIcon: AlertTriangle, subtitle: "No details received within buffer time", accent: "var(--color-warning-700)" },
-  { id: "awaiting-details", number: "02", title: "Awaiting Client Details", type: "client-action", typeLabel: "Client Action", typeIcon: HandCoins, subtitle: "Waiting for financial information", accent: "var(--color-grey-600)" },
+  { id: "awaiting-details", number: "02", title: "Awaiting Client Details", type: "client-action", typeLabel: "Client Action", typeIcon: HandCoins, subtitle: "Waiting for financial information", accent: "var(--color-grey-500)" },
   { id: "discovery-call", number: "01", title: "Discovery Call", type: "touchpoint", typeLabel: "Advisor Touchpoint", typeIcon: Compass, subtitle: "Scheduled calls with clients", accent: "var(--bg-brand-primary)" },
 ];
 

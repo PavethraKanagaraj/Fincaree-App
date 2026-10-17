@@ -30,20 +30,16 @@
 
     /* Primary / Grey */
     --color-grey-25: #fbfbfb;
-    --color-grey-30: #f3f4f6;
     --color-grey-50: #f0f1f2;
     --color-grey-100: #e9eaec;
     --color-grey-200: #d1d3d8;
-    --color-grey-225: #bbbfc5;
     --color-grey-250: #a7acb4;
     --color-grey-265: #9196a1;
     --color-grey-285: #7e8490;
     --color-grey-300: #6b7280;
     --color-grey-400: #606773;
     --color-grey-500: #565b66;
-    --color-grey-600: #505660;
     --color-grey-700: #40444d;
-    --color-grey-750: #38404a;
     --color-grey-800: #30333a;
     --color-grey-900: #25282d;
     --color-grey-925: #202227;
@@ -102,16 +98,6 @@
     --color-info-900: #002266;
 
     /* Secondary */
-    --color-secondary-25: #f2ebfd;
-    --color-secondary-50: #d6c2f9;
-    --color-secondary-100: #c3a4f7;
-    --color-secondary-200: #a77bf3;
-    --color-secondary-300: #9661f1;
-    --color-secondary-400: #7c3aed;
-    --color-secondary-500: #7135d8;
-    --color-secondary-600: #5829a8;
-    --color-secondary-700: #442082;
-    --color-secondary-800: #341864;
     /* Secondary / Blue */
     --color-blue-25: #f0f9ff;
     --color-blue-50: #e0f2fe;
@@ -119,7 +105,7 @@
     --color-blue-200: #7cd4fd;
     --color-blue-300: #36bffa;
     --color-blue-400: #0ba5ec;
-    --color-blue-500: #0ba5ec;
+    --color-blue-500: #0595dc;
     --color-blue-600: #0086c9;
     --color-blue-700: #026aa2;
     --color-blue-800: #0b4a6f;
@@ -279,8 +265,8 @@
     --text-quaternary: var(--color-grey-300);
     --text-disabled: var(--color-grey-300);
     --text-placeholder: var(--color-grey-400);
-    --text-placeholder-subtle: var(--color-grey-300);
-    --text-muted: var(--color-grey-600);
+    --text-placeholder-subtle: var(--color-grey-400);
+    --text-muted: var(--color-grey-500);
     --text-primary-hover: var(--color-grey-800);
     --text-on-brand-primary: var(--color-white);
     --text-brand-primary: var(--color-brand-700);
@@ -304,6 +290,7 @@
     --border-secondary: var(--color-grey-200);
     --border-tertiary: var(--color-grey-100);
     --border-disabled: var(--color-grey-200);
+    --border-control: var(--color-grey-285);
     --border-brand-primary: var(--color-brand-500);
     --border-brand-secondary: var(--color-brand-400);
     --border-brand-subtle: var(--color-brand-200);
@@ -340,7 +327,7 @@
     /* Background */
     --bg-canvas: var(--color-grey-25);
     --bg-primary: var(--color-white);
-    --bg-subtle: var(--color-grey-30);
+    --bg-subtle: var(--color-grey-50);
     --bg-secondary: var(--color-grey-50);
     --bg-tertiary: var(--color-grey-100);
     --bg-disabled: var(--color-grey-50);
@@ -364,22 +351,22 @@
     --bg-status-warning-pressed: var(--color-warning-200);
     --bg-status-warning-focus: var(--color-warning-200);
     --bg-status-warning-solid: var(--color-warning-500);
-    --bg-status-warning-solid-hover: var(--color-warning-600);
-    --bg-status-warning-solid-pressed: var(--color-warning-700);
+    --bg-status-warning-solid-hover: var(--color-warning-400);
+    --bg-status-warning-solid-pressed: var(--color-warning-300);
     --bg-status-success-subtle: var(--color-success-50);
     --bg-status-success-hover: var(--color-success-100);
     --bg-status-success-pressed: var(--color-success-200);
     --bg-status-success-focus: var(--color-success-200);
-    --bg-status-success-solid: var(--color-success-500);
-    --bg-status-success-solid-hover: var(--color-success-600);
-    --bg-status-success-solid-pressed: var(--color-success-700);
+    --bg-status-success-solid: var(--color-success-600);
+    --bg-status-success-solid-hover: var(--color-success-700);
+    --bg-status-success-solid-pressed: var(--color-success-800);
     --bg-status-info-subtle: var(--color-info-50);
     --bg-status-info-hover: var(--color-info-100);
     --bg-status-info-pressed: var(--color-info-200);
     --bg-status-info-focus: var(--color-info-200);
-    --bg-status-info-solid: var(--color-info-500);
-    --bg-status-info-solid-hover: var(--color-info-600);
-    --bg-status-info-solid-pressed: var(--color-info-700);
+    --bg-status-info-solid: var(--color-info-600);
+    --bg-status-info-solid-hover: var(--color-info-700);
+    --bg-status-info-solid-pressed: var(--color-info-800);
     --bg-interactive-hover: var(--color-brand-25);
 
     /* Overlay */
@@ -396,14 +383,14 @@
     /* Icon */
     --icon-primary: var(--color-grey-900);
     --icon-secondary: var(--color-grey-700);
-    --icon-tertiary: var(--color-grey-600);
+    --icon-tertiary: var(--color-grey-500);
     --icon-quaternary: var(--color-grey-500);
     --icon-placeholder: var(--color-grey-400);
     --icon-disabled: var(--color-grey-300);
     --icon-placeholder-subtle: var(--color-grey-300);
     --icon-brand-primary: var(--color-brand-500);
     --icon-brand-secondary: var(--color-brand-600);
-    --icon-brand-tertiary: var(--color-brand-100);
+    --icon-brand-tertiary: var(--color-brand-400);
     --icon-on-brand-primary: var(--color-white);
     --icon-status-info: var(--color-info-500);
     --icon-status-success-strong: var(--color-success-700);
@@ -432,17 +419,17 @@
 
     /* Chart */
     --chart-info: var(--color-info-500);
-    --chart-info-2: var(--color-info-300);
+    --chart-info-2: var(--color-info-400);
     --chart-negative: var(--color-error-500);
     --chart-negative-2: var(--color-error-300);
     --chart-neutral: var(--color-grey-500);
     --chart-neutral-2: var(--color-grey-300);
     --chart-positive: var(--color-success-500);
-    --chart-positive-2: var(--color-success-300);
+    --chart-positive-2: var(--color-success-600);
     --chart-series-01: var(--color-brand-500);
-    --chart-series-02: var(--color-blue-500);
+    --chart-series-02: var(--color-blue-600);
     --chart-series-03: var(--color-purple-500);
-    --chart-series-04: var(--color-green-500);
+    --chart-series-04: var(--color-green-600);
     --chart-series-05: var(--color-orange-500);
     --chart-series-06: var(--color-rose-500);
     --chart-series-07: var(--color-brand-700);
@@ -452,7 +439,7 @@
     --chart-series-11: var(--color-orange-700);
     --chart-series-12: var(--color-rose-700);
     --chart-warning: var(--color-warning-500);
-    --chart-warning-2: var(--color-warning-300);
+    --chart-warning-2: var(--color-warning-600);
 
     /* Sidebar */
     --sidebar-background: var(--color-grey-25);
@@ -460,7 +447,7 @@
     --sidebar-background-hover: var(--color-grey-50);
     --sidebar-border: var(--color-grey-200);
     --sidebar-divider: var(--color-grey-200);
-    --sidebar-icon: var(--color-grey-600);
+    --sidebar-icon: var(--color-grey-500);
     --sidebar-icon-active: var(--color-brand-700);
     --sidebar-icon-hover: var(--color-grey-800);
     --sidebar-text: var(--color-grey-700);
@@ -490,13 +477,13 @@
 
     /* Button — Brand/Secondary */
     --btn-secondary-bg:              var(--bg-primary);
-    --btn-secondary-bg-hover:        var(--bg-canvas);
+    --btn-secondary-bg-hover:        var(--bg-secondary);
     --btn-secondary-bg-disabled:     var(--bg-canvas);
     --btn-secondary-border:          var(--border-secondary);
-    --btn-secondary-border-hover:    var(--border-secondary);
+    --btn-secondary-border-hover:    var(--border-interactive-hover);
     --btn-secondary-border-disabled: var(--border-tertiary);
     --btn-secondary-text:            var(--text-muted);
-    --btn-secondary-text-hover:      var(--text-tertiary-hover);
+    --btn-secondary-text-hover:      var(--text-primary);
     --btn-secondary-text-disabled:   var(--text-disabled);
     --btn-secondary-icon:            var(--icon-tertiary);
     --btn-secondary-icon-hover:      var(--icon-secondary);
@@ -554,13 +541,14 @@
     /* Button — Destructive/Secondary */
     --btn-dest-secondary-bg:              transparent;
     --btn-dest-secondary-bg-hover:        var(--bg-status-error-subtle);
-    --btn-dest-secondary-bg-pressed:      var(--bg-status-error-pressed);
+    --btn-dest-secondary-bg-pressed:      var(--bg-status-error-hover);
     --btn-dest-secondary-bg-disabled:     transparent;
     --btn-dest-secondary-border:          var(--border-status-error);
     --btn-dest-secondary-border-hover:    var(--border-status-error-hover);
     --btn-dest-secondary-border-disabled: var(--border-disabled);
     --btn-dest-secondary-text:            var(--text-status-error);
     --btn-dest-secondary-text-hover:      var(--text-status-error);
+    --btn-dest-secondary-text-pressed:    var(--text-status-error-strong);
     --btn-dest-secondary-text-disabled:   var(--text-disabled);
     --btn-dest-secondary-focus-halo:      var(--focus-ring-halo-error);
     --btn-dest-secondary-bg-loading:      var(--bg-status-error-subtle);
@@ -620,11 +608,11 @@
     --input-bg:                    var(--bg-primary);
     --input-bg-disabled:           var(--bg-disabled);
     --input-bg-readonly:           var(--bg-secondary);
-    /* Rest is deliberately light (Border.Default.Secondary): Figma's
-       Border/Default aliases Border.Default.Primary, which would make hover
-       (Border.Interactive.Hover) LIGHTER than rest. Rest → hover → filled →
-       focus darkens monotonically here instead. */
-    --input-border-rest:           var(--border-secondary);
+    /* Rest is Border.Default.Control (Grey 285, 3.76:1 on white): WCAG 1.4.11 needs a
+       control's edge to reach 3:1, and Border.Default.Secondary (1.50:1) did not.
+       Figma's Input/Border/Default now aliases the same token, so file and code agree.
+       Rest → hover (Grey 400) → filled → focus darkens monotonically. */
+    --input-border-rest:           var(--border-control);
     --input-border-hover:          var(--border-interactive-hover);
     --input-border-filled:         var(--border-primary);
     --input-border-focus:          var(--border-brand-primary);
@@ -871,10 +859,10 @@
     --select-dot:             var(--fg-status-success);  /* Foreground/Status/Success */
     --select-avatar-ring:     var(--border-secondary);
     --select-bg:              var(--bg-primary);   /* Select/Background/Default */
-    /* Rest border matches Input (light → hover → dark once filled → brand on
-       focus). Figma's Select/Border/Default is Border.Default.Primary, the same
-       dark-at-rest value the Input decision set aside. */
-    --select-border:          var(--border-secondary);
+    /* Rest border matches Input: Border.Default.Control (Grey 285, 3.76:1 on white,
+       WCAG 1.4.11). Figma's Select/Border/Default aliases the same token. Then
+       hover → dark once filled → brand on focus. */
+    --select-border:          var(--border-control);
     --select-border-hover:    var(--border-interactive-hover);
     --select-border-filled:   var(--border-primary);
     --select-radius:          var(--radius-lg);        /* Figma radius-md 8px = Fincaree LG */
@@ -1489,6 +1477,7 @@
     --border-secondary: var(--color-grey-700);
     --border-tertiary: var(--color-grey-800);
     --border-disabled: var(--color-grey-700);
+    --border-control: var(--color-grey-285);
     --border-brand-primary: var(--color-brand-400);
     --border-brand-secondary: var(--color-brand-300);
     --border-brand-subtle: var(--color-brand-800);
@@ -1511,7 +1500,7 @@
     --fg-secondary: var(--color-grey-200);
     --fg-tertiary: var(--color-grey-400);
     --fg-quaternary: var(--color-grey-700);
-    --fg-disabled: var(--color-grey-600);
+    --fg-disabled: var(--color-grey-500);
     --fg-brand-primary: var(--color-brand-400);
     --fg-brand-secondary: var(--color-brand-300);
     --fg-brand-subtle: var(--color-brand-700);
@@ -1549,22 +1538,22 @@
     --bg-status-warning-pressed: var(--color-warning-700);
     --bg-status-warning-focus: var(--color-warning-700);
     --bg-status-warning-solid: var(--color-warning-500);
-    --bg-status-warning-solid-hover: var(--color-warning-600);
-    --bg-status-warning-solid-pressed: var(--color-warning-700);
+    --bg-status-warning-solid-hover: var(--color-warning-400);
+    --bg-status-warning-solid-pressed: var(--color-warning-300);
     --bg-status-success-subtle: var(--color-success-900);
     --bg-status-success-hover: var(--color-success-800);
     --bg-status-success-pressed: var(--color-success-700);
     --bg-status-success-focus: var(--color-success-700);
-    --bg-status-success-solid: var(--color-success-500);
-    --bg-status-success-solid-hover: var(--color-success-600);
-    --bg-status-success-solid-pressed: var(--color-success-700);
+    --bg-status-success-solid: var(--color-success-600);
+    --bg-status-success-solid-hover: var(--color-success-700);
+    --bg-status-success-solid-pressed: var(--color-success-800);
     --bg-status-info-subtle: var(--color-info-900);
     --bg-status-info-hover: var(--color-info-800);
     --bg-status-info-pressed: var(--color-info-700);
     --bg-status-info-focus: var(--color-info-700);
-    --bg-status-info-solid: var(--color-info-500);
-    --bg-status-info-solid-hover: var(--color-info-600);
-    --bg-status-info-solid-pressed: var(--color-info-700);
+    --bg-status-info-solid: var(--color-info-600);
+    --bg-status-info-solid-hover: var(--color-info-700);
+    --bg-status-info-solid-pressed: var(--color-info-800);
     --bg-interactive-hover: var(--color-grey-800);
 
     /* Overlay */
@@ -1621,7 +1610,7 @@
     --chart-negative: var(--color-error-400);
     --chart-negative-2: var(--color-error-600);
     --chart-neutral: var(--color-grey-400);
-    --chart-neutral-2: var(--color-grey-600);
+    --chart-neutral-2: var(--color-grey-500);
     --chart-positive: var(--color-success-400);
     --chart-positive-2: var(--color-success-600);
     --chart-series-01: var(--color-brand-400);
@@ -1965,6 +1954,8 @@
   }
   .fc-btn-destructive.fc-btn-secondary:active:not(:disabled):not([data-loading]) {
     background-color: var(--btn-dest-secondary-bg-pressed);
+    /* Error 700 on the Error 100 pressed fill: 4.94:1 (Error 600 would be 3.43:1) */
+    color:            var(--btn-dest-secondary-text-pressed);
   }
   .fc-btn-destructive.fc-btn-secondary:focus-visible {
     box-shadow:

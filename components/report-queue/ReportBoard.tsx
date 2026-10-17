@@ -34,7 +34,7 @@ import {
    ============================================================ */
 
 const STATUS_ACCENT: Record<ReportStatus, string> = {
-  generating: "var(--color-grey-600)",
+  generating: "var(--color-grey-500)",
   "ai-draft-ready": "var(--bg-brand-primary)",
   "advisor-review": "var(--color-warning-700)",
   "needs-attention": "var(--color-error-500)",

@@ -466,6 +466,7 @@ const buttonTokens = () => `    /* Button — Brand/Primary */
     --btn-dest-secondary-border-disabled: ${cv(dS?.Border?.Disabled)};
     --btn-dest-secondary-text:            ${cv(dS?.Text?.Default)};
     --btn-dest-secondary-text-hover:      ${cv(dS?.Text?.Hover)};
+    --btn-dest-secondary-text-pressed:    ${cv(dS?.Text?.Pressed)};
     --btn-dest-secondary-text-disabled:   ${cv(dS?.Text?.Disabled)};
     --btn-dest-secondary-focus-halo:      var(--focus-ring-halo-error);
     --btn-dest-secondary-bg-loading:      ${cv(dS?.Background?.Loading)};

@@ -1,3 +1,20 @@
+# Secondary button hover — 17 Oct 2026
+
+The Brand/Secondary button's hover was too subtle: the fill went from white to Canvas
+(Grey 25) and the border did not change. Updated in `figma/components.json`
+(`Button/Brand/Secondary`, both modes) and regenerated into `app/globals.css` with `npm run tokens`.
+
+| Token | From | To |
+|---|---|---|
+| `Background/Hover` | `Background/Default/Canvas` | `Background/Default/Secondary` |
+| `Border/Hover` | `Border/Default/Secondary` | `Border/Interactive/Hover` |
+| `Text/Hover` | `Text/Default/Tertiary Hover` | `Text/Default/Primary` |
+
+**Not yet updated in Figma:** set the same three variables in `7.Components` (Button / Brand / Secondary / Hover).
+Destructive Secondary is unchanged.
+
+---
+
 # Semantic colour cleanup — 25 Sep 2026
 
 Changes applied to `figma/semantic-colors.json` and `figma/components.json` so the
@@ -159,3 +176,73 @@ Removed from JSON, CSS, Storybook and Figma. Text on a brand fill uses `Text/On 
 | `Text/On Brand/Muted` | Brand 200 — 2.67:1 | Brand 100 — 3.65:1 |
 | `Text/On Brand/Decorative` | Brand 300 — 1.88:1 | Brand 300 — 1.88:1 |
 
+
+# Control border and placeholder contrast; unused greys removed — 17 Oct 2026
+
+Found by a WCAG 2.1 AA pass over the light-mode semantic tokens (text and icon tokens against every
+background, plus control boundaries). Applied in Figma (`Design System Master File`), JSON, CSS and Storybook.
+
+| Token | Before (light) | After (light) | Why |
+|---|---|---|---|
+| `Border/Default/Control` (new semantic token) | — | **Grey 285** (both modes) — 3.76:1 on white, 3.32:1 on `Background/Secondary` | WCAG 1.4.11: a control's boundary needs 3:1. One shared token for the resting border of form controls |
+| `Input/Border/Default` (`--input-border-rest`) | Figma: `Border/Default/Primary` (Grey 900). Code: `Border/Default/Secondary` — **1.50:1** | `Border/Default/Control` | Figma and code now agree. Rest → hover (Grey 400) → filled (Grey 900) darkens monotonically |
+| `Select/Border/Default` (`--select-border`) | Figma: `Border/Default/Primary`. Code: `Border/Default/Secondary` — **1.50:1** | `Border/Default/Control` | Same fix as Input; the first audit missed Select |
+| `Text/Default/Placeholder Subtle` | Grey 300 — **4.39:1** on `Background/Default/Subtle` | **Grey 400** — 5.18:1 | WCAG 1.4.3: text needs 4.5:1. Now equals `Text/Default/Placeholder` in light mode; dark mode unchanged |
+| `Colors/Primary/Grey/225` | `#bbbfc5` | removed | No variable, component or code reference |
+| `Colors/Primary/Grey/750` | `#38404a` | removed | Retired when the dark canvas moved to Grey 950; no reference remains |
+
+Figma documentation: the Grey 225 and 750 swatches were removed from the Primitive Colors page and the
+stale `{Colors.Primary.Grey.750}` notes on `Background/Default/Canvas` now read `{Colors.Primary.Grey.950}`.
+
+Left as is: `Border/Default/Secondary` and `Border/Default/Tertiary` (1.50:1, 1.20:1) are decorative dividers, which
+WCAG 1.4.11 does not cover; `Select/Menu/Border` is a popover edge with a shadow. `Text/Default/Disabled` and the disabled
+borders are exempt as disabled-control styling. Dark mode was not re-audited.
+
+Known and not changed: the swatch rectangles on the Figma colour documentation page are plain white fills
+(not bound to the primitives) in every frame, so the swatches look empty. That predates this change.
+
+# Contrast fixes from the three-level WCAG audit — 17 Oct 2026
+
+A WCAG 2.1 AA pass at three levels: primitive ladders, intended token pairings, and rendered components
+(130 Storybook stories, every interactive element, in rest, hover, pressed and focus; 1,670 text measurements).
+Applied in Figma (`Design System Master File`), JSON, CSS and Storybook.
+
+**The only failure in rendered components** was the destructive secondary button when pressed: Error 700 text on
+the Error 200 fill, 2.66:1. The other findings are tokens no component uses yet, fixed so they are safe to use.
+
+| Token | Before | After | Why |
+|---|---|---|---|
+| `Button/Destructive/Secondary/Background/Pressed` | `Background/Status/Error Pressed` (Error 200) | `Background/Status/Error Hover` (Error 100) | Lighter pressed fill; hover stays Error 50, so white → 50 → 100 still reads as a press |
+| `Button/Destructive/Secondary/Text/Pressed` (**new**; `--btn-dest-secondary-text-pressed`) | — (text stayed `Text/Status/Error`, Error 600) | `Text/Status/Error Strong` (Error 700) | Pressed was 2.66:1. Error 600 on the Error 100 fill would still be only 3.43:1; Error 700 gives 4.94:1 |
+| `Background/Status/Success Solid` (+ Hover, Pressed) | 500 / 600 / 700 | **600 / 700 / 800** (both modes) | White content on Success 500 was 4.12:1; now 4.84:1 |
+| `Background/Status/Info Solid` (+ Hover, Pressed) | 500 / 600 / 700 | **600 / 700 / 800** (both modes) | White content on Info 500 was 4.32:1; now 5.41:1 |
+| `Background/Status/Warning Solid Hover` / `Pressed` | Warning 600 / 700 | **Warning 400 / 300** (both modes) | Warning keeps dark content (4.64:1 at rest). On 600 and 700 it was 3.89:1 and 2.57:1; on 400 and 300 it is 5.89:1 and 6.91:1. Hover and pressed are now lighter than rest |
+| `Chart/Series 02` (light) | Blue 500 — 2.76:1 | Blue 600 — 4.00:1 | Graphical objects need 3:1 on white |
+| `Chart/Series 04` (light) | Green 500 — 2.17:1 | Green 600 — 3.21:1 | Same |
+| `Chart/Warning 2` · `Info 2` · `Positive 2` (light) | Warning 300 · Info 300 · Success 300 (2.1–2.5:1) | Warning 600 · Info 400 · Success 600 | A lighter companion tone cannot reach 3:1 and stay lighter, so these now step to the nearest passing tone |
+| `Icon/Brand/Tertiary` (light) | Brand 100 — 1.35:1 | Brand 400 — 3.4:1 | An icon needs 3:1 |
+
+**Usage rules, not value changes** (the tokens are correct on the surfaces they were made for):
+- `Text/Default/Quaternary` and `Text/Default/Placeholder Subtle` reach 4.5:1 on white only; do not place them on grey surfaces (4.0–4.4:1).
+- `Text/Brand/Tertiary` reaches 4.5:1 on white only (4.38:1 on `Background/Brand/Subtle`). Nothing uses it; `Text/Brand/Tertiary Hover` is used for link hover on white and passes.
+- Status text on `Background/Status/* Pressed` and `* Focus` fills (Error 200, Warning 200, Success 200) falls to 2.6–3.9:1. Use 800 or darker text there, or a lighter fill.
+
+**Checked and not a failure:** a "Copy" label at 4.27:1 in the Input matrix story is inside a disabled field; disabled controls are exempt from WCAG 1.4.3.
+
+# Primitive cleanup — 17 Oct 2026
+
+Checked against Figma first: every token below had no aliases and no bound layers, except the two merged greys,
+which were re-pointed before they were deleted. Applied in Figma, JSON, CSS and Storybook.
+
+| Change | Detail |
+|---|---|
+| `Grey/30` merged into `Grey/50` | ΔE 1.2 apart (indistinguishable). `Background/Default/Subtle` (light) now `Grey/50`, so Subtle and Secondary are the same value in light mode |
+| `Grey/600` merged into `Grey/500` | ΔE 2.3 apart. Re-pointed: `Text/Default/Muted`, `Icon/Default/Tertiary`, `Sidebar/Icon` (light); `Foreground/Default/Disabled`, `Chart/Neutral 2` (dark). Three direct code references (meeting desk, leads pipeline, report queue board) now use Grey 500 |
+| `Grey/925` **kept** | It is the dark-mode surface between the canvas (950) and cards (900). Merging it would recreate the problem fixed on 26 Sep (board columns vanishing) |
+| Ungrouped `Colors/Secondary/25–800` removed | A second purple ramp (#f2ebfd to #341864) sitting loose beside the grouped `Secondary/Purple`. Nothing referenced it |
+| Duplicate `Overlay/Black 16%` removed from the JSON | Figma only ever had `Overlay/Black/Black 16%`; the CSS variable is unchanged |
+| `Blue/500` `#0ba5ec` → `#0595dc` | It was identical to `Blue/400`. Now a real step between Blue 400 and Blue 600. Nothing referenced Blue 500, so nothing visible changes |
+| `Yellow` **kept** | Unused today but kept by decision |
+
+Figma documentation page: the Grey 30 and Grey 600 swatches were removed and the nine alias notes that named them now read Grey 50 and Grey 500
+(with their hex values). The rest of that page was already out of date and is unchanged.

@@ -12,7 +12,9 @@
     "docs": "node scripts/generate-docs.mjs",
     "sync": "npm run tokens && npm run tokens:components && npm run docs",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "wcag:tokens": "node scripts/wcag/tokens.mjs",
+    "wcag:components": "node scripts/wcag/components.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
