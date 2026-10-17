@@ -841,7 +841,7 @@ export default function ContentStudioPage() {
                 ))}
               </SelectField>
 
-              <SelectField size="sm" className="w-[152px]" aria-label="Assignment" value={assignmentFilter} onValueChange={(v: unknown) => setAssignmentFilter(v as AssignmentFilter)} items={ASSIGNMENT_LABEL}>
+              <SelectField size="sm" className="w-[176px]" aria-label="Assignment" value={assignmentFilter} onValueChange={(v: unknown) => setAssignmentFilter(v as AssignmentFilter)} items={ASSIGNMENT_LABEL}>
                 {(Object.keys(ASSIGNMENT_LABEL) as AssignmentFilter[]).map((a) => (
                   <SelectItem key={a} value={a}>{ASSIGNMENT_LABEL[a]}</SelectItem>
                 ))}
