@@ -45,7 +45,14 @@ import {
   DELIVERY_CHANNEL_HINT,
   TOPIC_LABEL,
 } from "./content-data";
-import { adviceLanguage, holdReason, isSendableToClients, type MeetingRef } from "./delivery-data";
+import {
+  adviceLanguage,
+  holdReason,
+  isSendableToClients,
+  MEETING_TEMPLATES,
+  RECENT_MEETINGS,
+  type MeetingRef,
+} from "./delivery-data";
 import {
   LEARNING_PATHS,
   insightFor,
@@ -211,6 +218,8 @@ export function SequenceBuilder({
   const [description, setDescription] = useState("");
   const [note, setNote] = useState("");
   const [meeting, setMeeting] = useState<MeetingRef | null>(null);
+  /* What the linked meeting was for; Finny uses it to pick matching content. */
+  const [purposeId, setPurposeId] = useState<string | null>(null);
   const [mode, setMode] = useState<RecipientMode>("client");
   const [clientId, setClientId] = useState<string | null>(null);
   const [groupIds, setGroupIds] = useState<Set<string>>(new Set());
@@ -249,6 +258,7 @@ export function SequenceBuilder({
       setClientId(seed.clientId);
     }
     setMeeting(seed.meeting ?? null);
+    setPurposeId(null);
     setSent(null);
     setNotice(
       held.length
@@ -397,46 +407,61 @@ export function SequenceBuilder({
      Finny's insight when it has one (its reasoning per item is shown, so the
      advisor can audit it); otherwise approved content matching the client's
      primary goal, labelled as such. Only sendable content is suggested. */
+  const purpose = MEETING_TEMPLATES.find((t) => t.id === purposeId) ?? null;
   const suggestion = useMemo(() => {
     if (mode !== "client" || !clientId) return null;
     const client = clients.find((c) => c.id === clientId);
     if (!client) return null;
     const first = client.name.split(" ")[0];
     const insight = insightFor(clientId);
+    const goal = TOPIC_LABEL[client.primaryGoal];
+
+    /* Meeting-purpose picks lead, so a post-meeting package starts with what
+       the meeting was about; Finny's own picks follow. */
+    const fromMeeting = (purpose?.contentIds ?? [])
+      .map((id) => byId.get(id))
+      .filter((i): i is ContentItem => Boolean(i))
+      .map((item) => ({ item, because: `Fits your ${purpose!.purpose.toLowerCase()}` }));
+    const meetingSignals = meeting && purpose ? [`${meeting.title} · ${meeting.date} — ${purpose.purpose}`] : [];
+
+    let own: { item: ContentItem; because: string }[];
+    let heldOwn = 0;
+    let signals: string[];
+    let headline: string;
     if (insight) {
       const all = insight.sequence
         .map((st) => ({ item: byId.get(st.contentId), because: st.because }))
         .filter((x): x is { item: ContentItem; because: string } => Boolean(x.item));
-      const picks = all.filter((x) => isSendable(x.item));
-      return {
-        client,
-        first,
-        headline: insight.headline,
-        signals: insight.signals,
-        picks,
-        held: all.length - picks.length,
-      };
+      own = all.filter((x) => isSendable(x.item));
+      heldOwn = all.length - own.length;
+      signals = insight.signals;
+      headline = insight.headline;
+    } else {
+      own = items
+        .filter((i) => i.topic === client.primaryGoal && isSendable(i))
+        .slice(0, 3)
+        .map((item) => ({ item, because: `Matches ${first}'s primary goal — ${goal}` }));
+      signals = [`Primary goal: ${goal}`, `${client.plan} plan`, `Next review in ${client.nextReviewInDays} days`];
+      headline = own.length
+        ? `Nothing specific is flagged for ${first} yet, so these match their primary goal: ${goal}.`
+        : `No approved content matches ${first}'s primary goal (${goal}) yet.`;
     }
-    const goal = TOPIC_LABEL[client.primaryGoal];
-    const picks = items
-      .filter((i) => i.topic === client.primaryGoal && isSendable(i))
-      .slice(0, 3)
-      .map((item) => ({ item, because: `Matches ${first}'s primary goal — ${goal}` }));
+
+    const sendableMeeting = fromMeeting.filter((x) => isSendable(x.item));
+    const seen = new Set(sendableMeeting.map((x) => x.item.id));
+    const picks = [...sendableMeeting, ...own.filter((x) => !seen.has(x.item.id))];
+    if (purpose && meeting && sendableMeeting.length) {
+      headline = `Following up ${meeting.title} (${meeting.date}): ${purpose.purpose.toLowerCase()} content first, then more for ${first}.`;
+    }
     return {
       client,
       first,
-      headline: picks.length
-        ? `Nothing specific is flagged for ${first} yet, so these match their primary goal: ${goal}.`
-        : `No approved content matches ${first}'s primary goal (${goal}) yet.`,
-      signals: [
-        `Primary goal: ${goal}`,
-        `${client.plan} plan`,
-        `Next review in ${client.nextReviewInDays} days`,
-      ],
+      headline,
+      signals: [...meetingSignals, ...signals],
       picks,
-      held: 0,
+      held: heldOwn + (fromMeeting.length - sendableMeeting.length),
     };
-  }, [mode, clientId, clients, byId, items]);
+  }, [mode, clientId, clients, byId, items, meeting, purpose]);
 
   /** Adds several content items at the end, skipping any already on the canvas. */
   function insertMany(ids: string[]) {
@@ -454,7 +479,8 @@ export function SequenceBuilder({
     if (!suggestion) return;
     insertMany(suggestion.picks.map((x) => x.item.id));
     if (!title.trim() && suggestion.picks.length > 1)
-      setTitle(`${TOPIC_LABEL[suggestion.picks[0].item.topic]} for ${suggestion.first}`);
+      setTitle(purpose ? purpose.title : `${TOPIC_LABEL[suggestion.picks[0].item.topic]} for ${suggestion.first}`);
+    if (purpose && !note.trim()) setNote(purpose.note);
   }
 
   /* ── Send ── */
@@ -933,7 +959,11 @@ export function SequenceBuilder({
                 label="Client"
                 placeholder="Choose a client"
                 value={clientId}
-                onValueChange={(v: unknown) => setClientId(v as string)}
+                onValueChange={(v: unknown) => {
+                  setClientId(v as string);
+                  setMeeting(null);
+                  setPurposeId(null);
+                }}
                 items={Object.fromEntries(clients.map((c) => [c.id, c.name]))}
               >
                 {clients.map((c) => (
@@ -942,6 +972,15 @@ export function SequenceBuilder({
                   </SelectItem>
                 ))}
               </SelectField>
+              {clientId && (
+                <MeetingContext
+                  meetings={RECENT_MEETINGS[clientId] ?? []}
+                  meeting={meeting}
+                  purposeId={purposeId}
+                  onMeeting={setMeeting}
+                  onPurpose={setPurposeId}
+                />
+              )}
               {suggestion && (
                 <FinnySuggestionCard
                   suggestion={suggestion}
@@ -1564,6 +1603,72 @@ function PickerRow({
   );
 }
 
+/* ─── Meeting context ───
+   Optional. Linking a meeting records the package against it; the purpose
+   tells Finny what the meeting was about, so its suggestions lead with it. */
+
+const NO_MEETING = "none";
+
+function MeetingContext({
+  meetings,
+  meeting,
+  purposeId,
+  onMeeting,
+  onPurpose,
+}: {
+  meetings: MeetingRef[];
+  meeting: MeetingRef | null;
+  purposeId: string | null;
+  onMeeting: (m: MeetingRef | null) => void;
+  onPurpose: (id: string | null) => void;
+}) {
+  /* A meeting linked from the review queue may not be in the recent list. */
+  const options = meeting && !meetings.some((m) => m.id === meeting.id) ? [meeting, ...meetings] : meetings;
+  if (options.length === 0) return null;
+  const label = (m: MeetingRef) => `${m.title} · ${m.date}`;
+
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      <SelectField
+        size="sm"
+        label="Meeting (optional)"
+        value={meeting?.id ?? NO_MEETING}
+        onValueChange={(v: unknown) => {
+          const m = options.find((x) => x.id === v) ?? null;
+          onMeeting(m);
+          /* "Quarterly Review" → the "Quarterly review" template; otherwise the advisor picks. */
+          const guess = m && MEETING_TEMPLATES.find((t) => t.purpose.toLowerCase() === m.title.toLowerCase());
+          onPurpose(guess ? guess.id : null);
+        }}
+        items={{ [NO_MEETING]: "Not linked to a meeting", ...Object.fromEntries(options.map((m) => [m.id, label(m)])) }}
+      >
+        <SelectItem value={NO_MEETING}>Not linked to a meeting</SelectItem>
+        {options.map((m) => (
+          <SelectItem key={m.id} value={m.id}>
+            {label(m)}
+          </SelectItem>
+        ))}
+      </SelectField>
+      {meeting && (
+        <SelectField
+          size="sm"
+          label="Meeting purpose"
+          placeholder="What was it for?"
+          value={purposeId}
+          onValueChange={(v: unknown) => onPurpose(v as string)}
+          items={Object.fromEntries(MEETING_TEMPLATES.map((t) => [t.id, t.purpose]))}
+        >
+          {MEETING_TEMPLATES.map((t) => (
+            <SelectItem key={t.id} value={t.id}>
+              {t.purpose}
+            </SelectItem>
+          ))}
+        </SelectField>
+      )}
+    </div>
+  );
+}
+
 /* ─── Finny suggestions ─── */
 
 interface FinnySuggestion {
@@ -1667,7 +1772,7 @@ function FinnySuggestionCard({
           {remaining === 0
             ? "All suggestions added"
             : remaining === picks.length
-              ? `Use as learning path (${picks.length} items)`
+              ? `Add all ${picks.length} suggestions`
               : `Add remaining ${remaining}`}
         </Button>
       )}

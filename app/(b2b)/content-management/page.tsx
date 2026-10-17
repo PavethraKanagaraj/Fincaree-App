@@ -29,7 +29,7 @@ import { ContentDetailDrawer, type DrawerTab } from "@/components/client-suggest
 import { SequenceBuilder, type SequenceSendPayload } from "@/components/client-suggestions/SequenceBuilder";
 import { AssignContentDrawer } from "@/components/client-suggestions/AssignContentDrawer";
 import { ReviewQueue, type ResolvedSend } from "@/components/client-suggestions/ReviewQueue";
-import { MarketingZone, PostMeetingStarter, SendLog, type PackageStart } from "@/components/client-suggestions/DeliveryPanels";
+import { MarketingZone, SendLog } from "@/components/client-suggestions/DeliveryPanels";
 import {
   REVIEW_QUEUE,
   SEND_TRIGGER_LABEL,
@@ -644,18 +644,6 @@ export default function ContentStudioPage() {
     setView("send");
   }
 
-  /** Starts a post-meeting package: the meeting purpose picks the template, the meeting is linked. */
-  function startPackage({ template, clientId, meeting }: PackageStart) {
-    setBuilderSeed((prev) => ({
-      ids: template.contentIds,
-      nonce: prev.nonce + 1,
-      title: template.title,
-      note: template.note,
-      clientId,
-      meeting,
-    }));
-  }
-
   return (
     <AppShell>
       {/* In the Send view (desktop), the page stops scrolling and the builder
@@ -715,9 +703,6 @@ export default function ContentStudioPage() {
           {view === "marketing" && <MarketingZone items={items} />}
           {view === "log" && <SendLog entries={auditLog} />}
 
-          <div hidden={view !== "send"} className="shrink-0">
-            <PostMeetingStarter clients={CLIENTS} onStart={startPackage} />
-          </div>
           <div hidden={view !== "send"} className="xl:flex-1 xl:min-h-0">
             <SequenceBuilder
               items={items}

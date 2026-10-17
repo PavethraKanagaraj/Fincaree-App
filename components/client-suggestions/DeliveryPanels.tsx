@@ -7,36 +7,28 @@
                    it. Exportable for the annual audit.
    MarketingZone   nurture sequences for leads who did not convert.
                    Kept visibly apart from plan-linked client sends.
-   PostMeetingStarter
-                   starts a package from a meeting: the meeting
-                   purpose picks the template, and the package
-                   links back to the meeting record.
 
-   Sourcing: Fincaree Badge, Button, Select, ui/table.
+   (Post-meeting packages now start from Finny's suggestions in the
+   Compose & send builder; see SequenceBuilder.)
+
+   Sourcing: Fincaree Badge, Button, ui/table.
    ============================================================ */
 
-import { useState } from "react";
 import { Badge } from "@/components/fincaree/badge";
 import { Button } from "@/components/fincaree/button";
-import { SelectField, SelectItem } from "@/components/fincaree/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Ban, CalendarCheck, Download, Megaphone, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Ban, Download, Megaphone, ShieldCheck, Users } from "lucide-react";
 import {
   AUDIT_ACTION_LABEL,
   type AuditAction,
   type AuditEntry,
-  type Client,
   type ContentItem,
 } from "./content-data";
 import {
-  MEETING_TEMPLATES,
   NURTURE_RULES,
   NURTURE_SEQUENCES,
-  RECENT_MEETINGS,
   holdReason,
   isSendableToLeads,
-  type MeetingRef,
-  type MeetingTemplate,
 } from "./delivery-data";
 
 /* ─── Send log ─── */
@@ -206,94 +198,6 @@ export function MarketingZone({ items }: { items: ContentItem[] }) {
           );
         })}
       </ul>
-    </section>
-  );
-}
-
-/* ─── Post-meeting starter ─── */
-
-export interface PackageStart {
-  template: MeetingTemplate;
-  clientId: string;
-  meeting: MeetingRef;
-}
-
-export function PostMeetingStarter({ clients, onStart }: { clients: Client[]; onStart: (p: PackageStart) => void }) {
-  const withMeetings = clients.filter((c) => (RECENT_MEETINGS[c.id] ?? []).length > 0);
-  const [clientId, setClientId] = useState(withMeetings[0]?.id ?? "");
-  const meetings = RECENT_MEETINGS[clientId] ?? [];
-  const [meetingId, setMeetingId] = useState<string>("");
-  const [templateId, setTemplateId] = useState(MEETING_TEMPLATES[0].id);
-
-  const meeting = meetings.find((m) => m.id === meetingId) ?? meetings[0];
-  const template = MEETING_TEMPLATES.find((t) => t.id === templateId) ?? MEETING_TEMPLATES[0];
-
-  /* The trigger shows a label, so each select needs value → label. */
-  const clientItems = Object.fromEntries(withMeetings.map((c) => [c.id, c.name]));
-  const meetingItems = Object.fromEntries(meetings.map((m) => [m.id, `${m.title} · ${m.date}`]));
-  const templateItems = Object.fromEntries(MEETING_TEMPLATES.map((t) => [t.id, t.purpose]));
-
-  return (
-    <section
-      aria-label="Start a post-meeting package"
-      className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] px-5 py-4"
-    >
-      <div className="flex items-start gap-2.5 mb-3">
-        <CalendarCheck size={16} strokeWidth={1.75} className="text-[var(--icon-brand-primary)] mt-0.5 shrink-0" />
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Post-meeting package</h2>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-            Pick the meeting and its purpose. We start the package with matching content and link it back to the meeting record.
-          </p>
-        </div>
-      </div>
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="w-[200px]">
-          <SelectField
-            label="Client"
-            size="sm"
-            value={clientId}
-            items={clientItems}
-            onValueChange={(v: unknown) => {
-              setClientId(v as string);
-              setMeetingId("");
-            }}
-          >
-            {withMeetings.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectField>
-        </div>
-        <div className="w-[220px]">
-          <SelectField label="Meeting" size="sm" value={meeting?.id ?? ""} items={meetingItems} onValueChange={(v: unknown) => setMeetingId(v as string)}>
-            {meetings.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.title} · {m.date}
-              </SelectItem>
-            ))}
-          </SelectField>
-        </div>
-        <div className="w-[240px]">
-          <SelectField label="Meeting purpose" size="sm" value={templateId} items={templateItems} onValueChange={(v: unknown) => setTemplateId(v as string)}>
-            {MEETING_TEMPLATES.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.purpose}
-              </SelectItem>
-            ))}
-          </SelectField>
-        </div>
-        <Button
-          variant="primary"
-          size="sm"
-          leadingIcon={<Sparkles size={14} strokeWidth={1.75} />}
-          disabled={!meeting}
-          onClick={() => meeting && onStart({ template, clientId, meeting })}
-        >
-          Start package
-        </Button>
-      </div>
     </section>
   );
 }
