@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageFrame } from "@/components/layout/PageFrame";
 import { MeetingAttentionRow } from "@/components/meeting-desk/MeetingAttentionRow";
 import { MeetingFilterToolbar } from "@/components/meeting-desk/MeetingFilterToolbar";
 import { MeetingTable } from "@/components/meeting-desk/MeetingTable";
@@ -70,28 +71,15 @@ export default function MeetingsPage() {
 
   return (
     <AppShell>
-      <div className="px-6 py-6 max-w-[1400px] mx-auto space-y-6">
-
-        {/* ── Page header ── */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">
-              Meetings
-            </h1>
-            <p className="text-sm text-[var(--text-tertiary)] mt-0.5">
-              Prepare, run and follow up on every client meeting in one place
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="secondary" size="sm" iconOnly leadingIcon={<RefreshCw size={15} strokeWidth={1.75} />} aria-label="Refresh" />
-            <Button variant="secondary" size="sm" iconOnly leadingIcon={<Download size={15} strokeWidth={1.75} />} aria-label="Export" />
-            <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />}>
-              Schedule Meeting
-            </Button>
-          </div>
-        </div>
-
+      <PageFrame width="full" title="Meetings" description="Prepare, run and follow up on every client meeting in one place" actions={
+        <>
+          <Button variant="secondary" size="sm" iconOnly leadingIcon={<RefreshCw size={15} strokeWidth={1.75} />} aria-label="Refresh" />
+          <Button variant="secondary" size="sm" iconOnly leadingIcon={<Download size={15} strokeWidth={1.75} />} aria-label="Export" />
+          <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />}>
+            Schedule Meeting
+          </Button>
+        </>
+      }>
         {/* ── Attention row ── */}
         <MeetingAttentionRow onCardClick={handleAttentionCardClick} />
 
@@ -151,7 +139,7 @@ export default function MeetingsPage() {
             <MeetingTable meetings={filteredMeetings} onRowClick={setSelectedMeeting} />
           )}
         </div>
-      </div>
+      </PageFrame>
 
       <MeetingDeskDrawer meeting={selectedMeeting} onClose={() => setSelectedMeeting(null)} />
     </AppShell>

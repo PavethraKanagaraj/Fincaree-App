@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/PageFrame";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "@/components/fincaree/tabs";
 import { ANIKA_RAO } from "@/components/client-profile/client-data";
 import { ClientHeader } from "@/components/client-profile/ClientHeader";
@@ -32,7 +33,7 @@ export default function ClientProfilePage() {
 
   return (
     <AppShell>
-      <div className="px-6 py-6 max-w-[1440px] mx-auto">
+      <PageContainer width="default">
         <ClientHeader client={clientData} />
 
         {/* Design-system Tabs: trigger padding, the sliding indicator, arrow-key
@@ -62,7 +63,7 @@ export default function ClientProfilePage() {
           {activeTab === "engagement" && <EngagementTab client={clientData} />}
           {activeTab === "activity" && <ActivityTab activity={clientData.activity} discoveryContext={clientData.discoveryContext} />}
         </div>
-      </div>
+      </PageContainer>
     </AppShell>
   );
 }

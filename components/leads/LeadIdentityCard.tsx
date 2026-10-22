@@ -231,7 +231,7 @@ export function LeadIdentityCard({ onGoToStage }: LeadIdentityCardProps) {
           {AI_LEAD_INSIGHT.confidence} confidence
         </span>
 
-        <div className="mt-4 pt-4 border-t border-[var(--border-brand-secondary)] grid grid-cols-2 gap-3">
+        <div className="mt-4 pt-4 border-t border-[var(--border-brand-secondary)] grid grid-cols-2 gap-4">
           <div>
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{AI_LEAD_SCORE.score}</span>

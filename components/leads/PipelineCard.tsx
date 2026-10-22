@@ -3,10 +3,11 @@
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/fincaree/avatar";
-import { Badge } from "@/components/fincaree/badge";
+import { Badge, type BadgeColor } from "@/components/fincaree/badge";
 import { Tag } from "@/components/fincaree/tag";
-import { PipelineLead } from "./pipeline-data";
-import { Calendar, Circle, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
+import { GoalTags } from "./GoalTags";
+import { PipelineLead, LEAD_SOURCE_LABEL } from "./pipeline-data";
+import { Calendar, Circle, CheckCircle2, AlertTriangle, ArrowRight, Clock, type LucideIcon } from "lucide-react";
 
 /* ============================================================
    Pipeline Card — same anatomy as the Meeting Desk's MeetingCard:
@@ -16,6 +17,8 @@ import { Calendar, Circle, CheckCircle2, AlertTriangle, ArrowRight } from "lucid
    ============================================================ */
 
 const STATUS_GLOW: Record<string, string> = {
+  invited: "rgba(0, 0, 0, 0.12)",
+  suggested: "rgba(0, 0, 0, 0.12)",
   "discovery-call": "rgba(0, 0, 0, 0.12)",
   "awaiting-details": "rgba(0, 0, 0, 0.12)",
   "needs-followup": "rgba(217, 119, 6, 0.20)",
@@ -30,6 +33,93 @@ function initialsOf(lead: PipelineLead): string {
 
 function ctaText(label: string): string {
   return label.replace(/\s*→\s*$/, "");
+}
+
+function statusColor(lead: PipelineLead): BadgeColor {
+  if (lead.stage === "needs-followup") return "warning";
+  if (lead.stage === "invited" && lead.lastActivitySort >= 5) return "warning";
+  if (lead.stage === "ready-for-advice" || lead.highIntent) return "success";
+  if (lead.stage === "suggested") return "brand";
+  return "gray-blue";
+}
+
+/** The single fact that says where this lead stands in its stage. */
+function KeyFact({ lead }: { lead: PipelineLead }) {
+  if (lead.completeness !== undefined) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">Data completeness</span>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">{lead.completeness}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+          <div className="h-full rounded-full bg-[var(--color-success-500)]" style={{ width: `${lead.completeness}%` }} />
+        </div>
+      </div>
+    );
+  }
+
+  const fact: { icon: LucideIcon; text: string; urgent?: boolean } | null =
+    lead.meetingLabel ? { icon: Calendar, text: lead.meetingLabel }
+    : lead.noResponseNote ? { icon: AlertTriangle, text: lead.noResponseNote, urgent: true }
+    : lead.completedNote ? { icon: Clock, text: lead.completedNote }
+    : lead.planSharedNote ? { icon: Clock, text: lead.planSharedNote }
+    : null;
+  if (!fact) return null;
+
+  const Icon = fact.icon;
+  return (
+    <div className={cn("flex items-center gap-1.5 text-[13px] font-semibold", fact.urgent ? "text-[var(--text-status-error)]" : "text-[var(--text-primary)]")}>
+      <Icon size={13} strokeWidth={1.75} className={cn("shrink-0", fact.urgent ? "text-[var(--icon-status-error)]" : "text-[var(--icon-tertiary)]")} />
+      {fact.text}
+    </div>
+  );
+}
+
+/** Quieter than the key fact: profile facts on one line, to-dos and checks as a list. */
+function SupportingDetail({ lead }: { lead: PipelineLead }) {
+  const lines: string[] = [];
+  if (lead.meetingFacts) lines.push(lead.meetingFacts.join(" · "));
+  if (lead.lastActivityNote || lead.followUpAttempts !== undefined) {
+    const attempts = lead.followUpAttempts !== undefined
+      ? `${lead.followUpAttempts} follow-up ${lead.followUpAttempts === 1 ? "attempt" : "attempts"}`
+      : null;
+    lines.push([lead.lastActivityNote, attempts].filter(Boolean).join(" · "));
+  }
+  if (lead.decisionNote) lines.push(lead.decisionNote);
+
+  return (
+    <>
+      {lines.map((l) => (
+        <p key={l} className="text-xs text-[var(--text-secondary)] leading-snug">{l}</p>
+      ))}
+
+      {lead.checklist && (
+        <div>
+          <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1">Still needed</p>
+          <ul className="space-y-1">
+            {lead.checklist.map((f) => (
+              <li key={f} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+                <Circle size={5} strokeWidth={2} className="fill-current text-[var(--icon-quaternary)] shrink-0" />
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {lead.readyChecklist && (
+        <ul className="space-y-1">
+          {lead.readyChecklist.map((c) => (
+            <li key={c} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+              <CheckCircle2 size={12} strokeWidth={2} className="text-[var(--icon-status-success-strong)] shrink-0" />
+              {c}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
 }
 
 interface PipelineCardProps {
@@ -59,73 +149,26 @@ export function PipelineCard({ lead, onOpen }: PipelineCardProps) {
           <Avatar size="sm" initials={initialsOf(lead)} />
           <div className="min-w-0">
             <div className="text-sm font-bold text-[var(--text-primary)] leading-tight truncate">{lead.name}</div>
-            <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5 leading-tight truncate">{lead.goal} · {lead.timeline}</div>
+            <GoalTags lead={lead} />
           </div>
         </div>
       </div>
 
       <div className="h-px bg-[var(--border-tertiary)]" />
 
-      {/* Body */}
-      <div className="px-3.5 pt-3 pb-2.5 flex flex-col gap-2 flex-1">
-        {lead.meetingLabel && (
-          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-primary)]">
-            <Calendar size={12} strokeWidth={1.75} className="text-[var(--icon-tertiary)] shrink-0" />
-            {lead.meetingLabel}
-          </div>
-        )}
-        {(lead.meetingFacts ?? lead.checklist) && (
-          <ul className="space-y-1">
-            {(lead.meetingFacts ?? lead.checklist ?? []).map((f) => (
-              <li key={f} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                <Circle size={5} strokeWidth={2} className="fill-current text-[var(--icon-quaternary)] shrink-0" />
-                {f}
-              </li>
-            ))}
-          </ul>
-        )}
-        {lead.completedNote && <p className="text-xs text-[var(--text-secondary)]">{lead.completedNote}</p>}
-
-        {lead.noResponseNote && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Tag color="error" size="sm" icon={<AlertTriangle size={10} strokeWidth={2} />}>
-              {lead.noResponseNote}
-            </Tag>
-          </div>
-        )}
-        {lead.lastActivityNote && <p className="text-[12px] text-[var(--text-tertiary)]">{lead.lastActivityNote}</p>}
-        {lead.followUpAttempts !== undefined && (
-          <p className="text-xs text-[var(--text-secondary)]">{lead.followUpAttempts} follow-up {lead.followUpAttempts === 1 ? "attempt" : "attempts"}</p>
-        )}
-
-        {lead.readyChecklist && (
-          <ul className="space-y-1">
-            {lead.readyChecklist.map((c) => (
-              <li key={c} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                <CheckCircle2 size={12} strokeWidth={2} className="text-[var(--icon-status-success-strong)] shrink-0" />
-                {c}
-              </li>
-            ))}
-          </ul>
-        )}
-        {lead.completeness !== undefined && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[12px] text-[var(--text-tertiary)]">Data completeness</span>
-              <span className="text-[12px] font-semibold text-[var(--text-primary)]">{lead.completeness}%</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-              <div className="h-full rounded-full bg-[var(--color-success-500)]" style={{ width: `${lead.completeness}%` }} />
-            </div>
-          </div>
-        )}
-
-        {lead.planSharedNote && <p className="text-xs text-[var(--text-secondary)]">{lead.planSharedNote}</p>}
-        {lead.decisionNote && <p className="text-xs text-[var(--text-secondary)]">{lead.decisionNote}</p>}
-
-        <div>
-          <Badge color="gray-blue" leadingIcon="dot" size="sm">{lead.statusTag}</Badge>
+      {/* Body — same order in every stage:
+          1 status, 2 the one fact that defines this stage, 3 supporting detail */}
+      <div className="px-3.5 pt-3 pb-3 flex flex-col gap-2.5 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge color={statusColor(lead)} leadingIcon="dot" size="sm">{lead.statusTag}</Badge>
+          {lead.source !== "self-booked" && (
+            <Tag color={lead.source === "suggested" ? "brand" : "grey"} size="sm">{LEAD_SOURCE_LABEL[lead.source]}</Tag>
+          )}
         </div>
+
+        <KeyFact lead={lead} />
+
+        <SupportingDetail lead={lead} />
       </div>
 
       <div className="h-px bg-[var(--border-tertiary)]" />

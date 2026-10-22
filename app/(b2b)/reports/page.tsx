@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageFrame } from "@/components/layout/PageFrame";
 import { QueueKpiCards } from "@/components/report-queue/QueueKpiCards";
 import { WorkPlan } from "@/components/report-queue/WorkPlan";
 import { FilterToolbar, PrimaryFilters } from "@/components/report-queue/FilterToolbar";
@@ -139,37 +140,16 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <div className="px-6 py-6 max-w-[1400px] mx-auto space-y-5">
-
-        {/* ── Page header ── */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">
-              Report Queue
-            </h1>
-            <p className="text-sm text-[var(--text-tertiary)] mt-0.5">
-              AI-assisted reports that require review, validation or approval.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="secondary"
-              size="sm"
-              leadingIcon={<Download size={14} strokeWidth={1.75} />}
-            >
-              Export
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              leadingIcon={<Plus size={14} strokeWidth={2} />}
-            >
-              Create Report
-            </Button>
-          </div>
-        </div>
-
+      <PageFrame width="default" title="Report Queue" description="AI-assisted reports that require review, validation or approval." actions={
+        <>
+          <Button variant="secondary" size="sm" leadingIcon={<Download size={14} strokeWidth={1.75} />}>
+            Export
+          </Button>
+          <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />}>
+            Create Report
+          </Button>
+        </>
+      }>
         {/* ── KPI cards: how much work is there? ── */}
         <QueueKpiCards reports={REPORTS} onSelect={handleKpiSelect} />
 
@@ -250,7 +230,7 @@ export default function ReportsPage() {
             )}
           </div>
         )}
-      </div>
+      </PageFrame>
 
       {/* ── Row detail drawer ── */}
       <ReportDrawer

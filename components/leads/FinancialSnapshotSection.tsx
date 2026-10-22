@@ -74,7 +74,7 @@ export function FinancialSnapshotSection() {
       </div>
 
       {/* Goal gap cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         {FINANCIAL_SNAPSHOT.goalGaps.map((g) => (
           <div key={g.goal} className="rounded-[var(--radius-lg)] bg-[var(--bg-primary)] p-3.5">
             <div className="flex items-center justify-between gap-2 mb-2">

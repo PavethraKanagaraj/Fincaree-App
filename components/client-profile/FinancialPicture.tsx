@@ -30,7 +30,7 @@ export function FinancialPicture({ data }: { data: FinancialPictureData }) {
       <p className="text-xs text-[var(--text-tertiary)] mb-4 max-w-prose">
         High-level indicators based on information provided. Planning horizon: {data.planningHorizon}.
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {items.map((item) => (
           <div
             key={item.label}

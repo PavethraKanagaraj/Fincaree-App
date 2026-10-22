@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Badge } from "@/components/fincaree/badge";
 import { Button } from "@/components/fincaree/button";
+import { GoalTags } from "./GoalTags";
 import { PipelineLead, PIPELINE_STAGES } from "./pipeline-data";
 import { Sparkles, ArrowRight, Calendar } from "lucide-react";
 
@@ -22,6 +23,12 @@ function lastActivityLabel(daysAgo: number): string {
 
 function aiNextAction(lead: PipelineLead): string {
   switch (lead.stage) {
+    case "suggested":
+      return `Fincaree matched ${lead.name.split(" ")[0]} to you on ${lead.goal.toLowerCase()} — accept to start scheduling a discovery call.`;
+    case "invited":
+      return lead.lastActivitySort >= 5
+        ? `Invite is ${lead.lastActivitySort} days old and unanswered — a short personal message from you usually gets it opened.`
+        : `${lead.name.split(" ")[0]} hasn't joined Fincaree yet — once they complete their profile you can schedule the discovery call.`;
     case "discovery-call":
       return `Review ${lead.name.split(" ")[0]}'s stated goals before the call — tailor your opening questions to ${lead.goal.toLowerCase()}.`;
     case "awaiting-details":
@@ -62,7 +69,7 @@ export function LeadDrawer({ lead, open, onOpenChange }: LeadDrawerProps) {
             </span>
             <div className="min-w-0">
               <SheetTitle className="truncate">{lead.name}</SheetTitle>
-              <p className="text-xs text-[var(--text-tertiary)]">{lead.goal} · {lead.timeline}</p>
+              <GoalTags lead={lead} />
             </div>
           </div>
         </SheetHeader>

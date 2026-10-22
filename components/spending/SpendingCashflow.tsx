@@ -397,7 +397,7 @@ export function SpendingCashflow() {
                           leadingIcon={<span aria-hidden className="font-semibold">₹</span>}
                           trailingAddon={<span className="text-xs text-[var(--text-tertiary)]">/ month extra</span>}
                         />
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-4">
                           <Stat label="Loan reduces by" value={`${prepayImpact(loan)} yrs`} tone="success" />
                           <Stat label="New surplus" value={fmtRupee(surplus)} />
                         </div>
@@ -579,7 +579,7 @@ function ExpenseBreakdownChart() {
       <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
         {/* Category table — ranked, ruler-axis bars */}
         <div className="min-w-0">
-          <div className={cn("grid items-end gap-3 pb-1.5", TABLE_GRID_COLS)}>
+          <div className={cn("grid items-end gap-4 pb-1.5", TABLE_GRID_COLS)}>
             <span />
             <span />
             <span className="flex justify-between text-[11px] text-[var(--text-tertiary)]">
@@ -595,7 +595,7 @@ function ExpenseBreakdownChart() {
               const fillPct = Math.max((item.value / axisMax) * 100, 3);
               const labelInside = fillPct >= 28;
               return (
-                <li key={item.name} className={cn("grid items-center gap-3 border-b border-[var(--border-tertiary)] py-3 last:border-b-0", TABLE_GRID_COLS)}>
+                <li key={item.name} className={cn("grid items-center gap-4 border-b border-[var(--border-tertiary)] py-3 last:border-b-0", TABLE_GRID_COLS)}>
                   <span className="text-sm font-semibold tabular-nums text-[var(--text-tertiary)]">{i + 1}</span>
                   <span className="truncate text-sm font-semibold text-[var(--text-primary)]">{item.name}</span>
                   <span

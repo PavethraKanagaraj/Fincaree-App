@@ -39,7 +39,7 @@ function Quadrant({ icon: Icon, iconColor, title, children }: { icon: LucideIcon
 
 export function IntelligenceSummaryGrid() {
   return (
-    <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {/* What we know */}
       <Quadrant icon={BookOpenCheck} iconColor="var(--text-secondary)" title="What We Know">
         <ul className="space-y-2.5">

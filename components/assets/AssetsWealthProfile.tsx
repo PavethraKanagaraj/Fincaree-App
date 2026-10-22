@@ -241,7 +241,7 @@ export function AssetsWealthProfile() {
           {/* 01 — method choice */}
           <SectionLabel num="01" title="How would you like to add your details?" />
           <section className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MethodCard
                 selected={method === "auto"}
                 onSelect={() => selectMethod("auto")}
@@ -266,7 +266,7 @@ export function AssetsWealthProfile() {
               <Shield size={16} strokeWidth={1.75} className="text-[var(--icon-brand-primary)]" aria-hidden />
               <span className="text-sm font-semibold text-[var(--text-primary)]">Your privacy is our priority</span>
             </div>
-            <ul className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <ul className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <PrivacyItem icon={Lock} title="Bank-grade encryption" text="AES-256 encryption, the same standard used by major banks." />
               <PrivacyItem icon={Zap} title="Temporary processing" text="The AI reads the figures to fill your profile, then discards the files." />
               <PrivacyItem icon={Scale} title="DPDP compliance" text="You can erase your files at any time with one tap." />
@@ -461,7 +461,7 @@ export function AssetsWealthProfile() {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Bucket
                     name="Liquid"
                     sub="Ready to move"

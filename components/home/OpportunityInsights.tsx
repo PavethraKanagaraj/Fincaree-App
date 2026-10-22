@@ -189,7 +189,7 @@ function ClientSignalsCard() {
     <section className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
       <span className="text-base font-semibold text-[var(--text-primary)]">Client Signals</span>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3 mb-5">
         {SIGNAL_STATS.map((stat) => (
           <div key={stat.id} className="rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] p-4">
             <div className="text-3xl font-bold tabular-nums leading-none" style={{ color: stat.color }}>
@@ -265,7 +265,7 @@ export function OpportunityInsights() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ClientLifeEventCard />
         <ClientSignalsCard />
       </div>

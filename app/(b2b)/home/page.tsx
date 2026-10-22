@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/AppShell";
+import { PageFrame, PageGrid } from "@/components/layout/PageFrame";
 import { PipelineSummaryCards } from "@/components/home/PipelineSummaryCards";
 import { TodaysMeetingsList } from "@/components/home/TodaysMeetingsList";
 import { TodaysWorkPlanPreview } from "@/components/home/TodaysWorkPlanPreview";
@@ -28,15 +29,7 @@ import { HOME_TODAY_LABEL } from "@/components/home/home-data";
 export default function HomePage() {
   return (
     <AppShell>
-      <div className="px-6 py-5 max-w-[1400px] mx-auto space-y-5">
-        {/* ── Page header ── */}
-        <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">
-            Good morning, Aditya
-          </h1>
-          <p className="text-sm text-[var(--text-tertiary)] mt-0.5">{HOME_TODAY_LABEL}</p>
-        </div>
-
+      <PageFrame width="default" title="Good morning, Aditya" description={HOME_TODAY_LABEL}>
         {/* ── Pipeline summary cards + Finny ── */}
         <PipelineSummaryCards />
 
@@ -44,26 +37,26 @@ export default function HomePage() {
         <PracticePerformance />
 
         {/* ── Today: schedule + work plan ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <TodaysMeetingsList />
-          <TodaysWorkPlanPreview />
-        </div>
+        <PageGrid>
+          <div className="col-span-12 lg:col-span-6 *:h-full"><TodaysMeetingsList /></div>
+          <div className="col-span-12 lg:col-span-6 *:h-full"><TodaysWorkPlanPreview /></div>
+        </PageGrid>
 
         {/* ── Client engagement + client queries ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <ClientEngagementChart />
-          <ClientQueriesPanel />
-        </div>
+        <PageGrid>
+          <div className="col-span-12 lg:col-span-6 *:h-full"><ClientEngagementChart /></div>
+          <div className="col-span-12 lg:col-span-6 *:h-full"><ClientQueriesPanel /></div>
+        </PageGrid>
 
         {/* ── Opportunity funnel + upcoming workshops ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <OpportunityFunnel />
-          <UpcomingWorkshops />
-        </div>
+        <PageGrid>
+          <div className="col-span-12 lg:col-span-6 *:h-full"><OpportunityFunnel /></div>
+          <div className="col-span-12 lg:col-span-6 *:h-full"><UpcomingWorkshops /></div>
+        </PageGrid>
 
         {/* ── Opportunity insights: life events + client signals ── */}
         <OpportunityInsights />
-      </div>
+      </PageFrame>
     </AppShell>
   );
 }

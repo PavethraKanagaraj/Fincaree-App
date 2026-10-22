@@ -753,7 +753,7 @@ export function SequenceBuilder({
             </div>
           </div>
           {/* Name and description side by side; they stack on narrow widths. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               ref={nameRef}
               size="sm"

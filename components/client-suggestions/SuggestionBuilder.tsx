@@ -69,7 +69,7 @@ export function SuggestionBuilder({
         </div>
 
         {/* Name + description fields */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <Input
             size="sm"
             label="Package Name"

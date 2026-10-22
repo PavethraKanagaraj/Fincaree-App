@@ -20,6 +20,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageFrame } from "@/components/layout/PageFrame";
 import { Button } from "@/components/fincaree/button";
 import { ListItem } from "@/components/fincaree/list-item";
 import { Input } from "@/components/fincaree/input";
@@ -650,13 +651,8 @@ export default function ContentStudioPage() {
     <AppShell>
       {/* In the Send view (desktop), the page stops scrolling and the builder
           fills the remaining height; its three columns scroll on their own. */}
-      <div className={cn("flex flex-col h-full overflow-y-auto bg-[var(--bg-canvas)]", view === "send" && "xl:overflow-hidden")}>
-        {/* ══ Header ══ */}
-        <div className="shrink-0 flex items-start justify-between gap-4 px-6 py-5 bg-[var(--bg-primary)] border-b border-[var(--border-tertiary)]">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">Content Management</h1>
-            <p className="text-sm text-[var(--text-tertiary)] mt-0.5">Approve what goes to clients, assemble post-meeting packages and manage the content library.</p>
-            <Tabs value={view} onValueChange={(v) => setView(v as PageView)} variant="pill" className="mt-4">
+      <PageFrame width="full" title="Content Management" description="Approve what goes to clients, assemble post-meeting packages and manage the content library." lockHeight={view === "send"} tabs={
+        <Tabs value={view} onValueChange={(v) => setView(v as PageView)} variant="pill">
               <TabsList aria-label="Content Management view">
                 <TabsTrigger value="queue" icon={<Inbox size={16} strokeWidth={1.75} />}>
                   Review queue
@@ -679,15 +675,11 @@ export default function ContentStudioPage() {
                 <TabsTrigger value="log" icon={<ScrollText size={16} strokeWidth={1.75} />}>Send log</TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate()}>
+      } actions={
+        <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate()}>
               Create Content
             </Button>
-          </div>
-        </div>
-
-        <div className={cn("px-6 py-6 space-y-6", view === "send" && "xl:flex xl:flex-col xl:flex-1 xl:min-h-0")}>
+      }>
           {/* ══ Send to clients — the Sequence Builder ══
               Kept mounted (hidden) so a half-built sequence survives a trip
               to the Library. */}
@@ -857,7 +849,7 @@ export default function ContentStudioPage() {
             {/* Advanced filters — kept out of the way until asked for */}
             {moreOpen && (
               <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
                     <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5">Created</p>
                     <SelectField size="sm" aria-label="Created" value={createdWindow} onValueChange={(v: unknown) => setCreatedWindow(v as CreatedWindow)} items={CREATED_WINDOW_LABEL}>
@@ -972,8 +964,7 @@ export default function ContentStudioPage() {
             />
           </div>
           </>)}
-        </div>
-      </div>
+      </PageFrame>
 
       {/* ══ Detail drawer ══ */}
       <ContentDetailDrawer

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageContainer, PageGrid } from "@/components/layout/PageFrame";
 import { SelectField, SelectItem } from "@/components/fincaree/select";
 import { Button } from "@/components/fincaree/button";
 import {
@@ -58,7 +59,7 @@ export default function LeadProfilePage() {
 
   return (
     <AppShell>
-      <div className="px-6 py-6 max-w-[1320px] mx-auto space-y-5">
+      <PageContainer width="default" className="space-y-6">
         {/* Top bar */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-1.5 text-sm text-[var(--text-tertiary)]">
@@ -103,12 +104,12 @@ export default function LeadProfilePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+        <PageGrid className="items-start">
           {/* Sticky left — Lead Identity Card */}
-          <LeadIdentityCard onGoToStage={goToStage} />
+          <div className="col-span-12 lg:col-span-4 xl:col-span-3"><LeadIdentityCard onGoToStage={goToStage} /></div>
 
           {/* Right — staged content, single scroll */}
-          <div className="min-w-0 space-y-4">
+          <div className="col-span-12 lg:col-span-8 xl:col-span-9 min-w-0 space-y-4">
             <IntelligenceSummaryGrid />
 
             <div id="stage-discover">
@@ -187,8 +188,8 @@ export default function LeadProfilePage() {
 
             <LeadActivityTimeline />
           </div>
-        </div>
-      </div>
+        </PageGrid>
+      </PageContainer>
     </AppShell>
   );
 }

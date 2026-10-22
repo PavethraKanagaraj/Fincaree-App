@@ -98,7 +98,7 @@ export function MarketingZone({ items }: { items: ContentItem[] }) {
           How it works
           <ChevronDown size={14} strokeWidth={2} className={cn("transition-transform", showHow && "rotate-180")} aria-hidden="true" />
         </button>
-        <ol hidden={!showHow} aria-label="How it works" className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <ol hidden={!showHow} aria-label="How it works" className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {HOW_IT_WORKS.map((step, i) => (
             <li key={step.title} className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] px-4 py-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-primary)] text-xs font-semibold text-[var(--text-secondary)] tabular-nums border border-[var(--border-tertiary)]">

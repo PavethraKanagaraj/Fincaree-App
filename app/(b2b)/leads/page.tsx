@@ -2,17 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageFrame, PageGrid } from "@/components/layout/PageFrame";
 import { Input } from "@/components/fincaree/input";
 import { SelectField, SelectItem } from "@/components/fincaree/select";
+import { Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/fincaree/button";
-import { Search, Plus } from "lucide-react";
 
 import { AiConversionBrief } from "@/components/leads/AiConversionBrief";
 import { TodaysFocus } from "@/components/leads/TodaysFocus";
 import { UpcomingMeetingsCard } from "@/components/leads/UpcomingMeetingsCard";
 import { PipelineBoard } from "@/components/leads/PipelineBoard";
 import { LeadDrawer } from "@/components/leads/LeadDrawer";
-import { PIPELINE_LEADS, PipelineLead } from "@/components/leads/pipeline-data";
+import { InviteContactDialog, ContactInvite } from "@/components/leads/InviteContactDialog";
+import type { NewLeadsTab } from "@/components/leads/PipelineBoard";
+import { StageOverviewStrip } from "@/components/leads/StageOverviewStrip";
+import { PIPELINE_LEADS, PipelineLead, LeadSource, LEAD_SOURCE_LABEL, leadGoals } from "@/components/leads/pipeline-data";
 
 /* ============================================================
    Lead Pipeline — /leads
@@ -21,6 +25,11 @@ import { PIPELINE_LEADS, PipelineLead } from "@/components/leads/pipeline-data";
    Focus tell the advisor what needs attention; the board tells
    them where each prospect stands in the pre-plan-selection
    journey; a card click opens context without leaving the board.
+   Leads arrive from the Fincaree platform — suggested matches wait
+   in the first column until the advisor accepts — so there is no
+   manual "Add Lead". The advisor's own network comes in as an
+   invite (Invite contact), and waits in Invited until the
+   contact joins.
    ============================================================ */
 
 type FilterOption =
@@ -32,6 +41,15 @@ type FilterOption =
   | "awaiting-client"
   | "decision-pending"
   | "stale";
+
+type SourceFilter = "all" | LeadSource;
+
+const SOURCE_FILTER_LABEL: Record<SourceFilter, string> = {
+  all: "All sources",
+  suggested: LEAD_SOURCE_LABEL.suggested,
+  "self-booked": LEAD_SOURCE_LABEL["self-booked"],
+  "own-contact": LEAD_SOURCE_LABEL["own-contact"],
+};
 
 const FILTER_LABEL: Record<FilterOption, string> = {
   all:               "All Leads",
@@ -47,12 +65,18 @@ const FILTER_LABEL: Record<FilterOption, string> = {
 export default function LeadPipelinePage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterOption>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [newTab, setNewTab] = useState<NewLeadsTab>("suggested");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+  const [allLeads, setAllLeads] = useState<PipelineLead[]>(PIPELINE_LEADS);
   const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const leads = useMemo(() => {
-    return PIPELINE_LEADS.filter((lead) => {
-      if (search && !`${lead.name} ${lead.goal}`.toLowerCase().includes(search.toLowerCase())) return false;
+    return allLeads.filter((lead) => {
+      if (sourceFilter !== "all" && lead.source !== sourceFilter) return false;
+      if (search && !`${lead.name} ${leadGoals(lead).join(" ")}`.toLowerCase().includes(search.toLowerCase())) return false;
       if (filter === "today-meetings")  return !!lead.meetingLabel?.startsWith("Today");
       if (filter === "high-intent")     return lead.highIntent;
       if (filter === "ready-to-plan")   return lead.stage === "ready-for-advice";
@@ -62,7 +86,54 @@ export default function LeadPipelinePage() {
       if (filter === "stale")           return lead.lastActivitySort >= 5;
       return true;
     });
-  }, [search, filter]);
+  }, [allLeads, search, filter, sourceFilter]);
+
+  const suggested = useMemo(() => leads.filter((l) => l.stage === "suggested"), [leads]);
+
+  function acceptLead(lead: PipelineLead) {
+    setAllLeads((prev) =>
+      prev.map((l) =>
+        l.id === lead.id
+          ? { ...l, stage: "discovery-call", statusTag: "Accepted · call not booked", ctaLabel: "Schedule call →" }
+          : l
+      )
+    );
+  }
+
+  function declineLead(lead: PipelineLead) {
+    setAllLeads((prev) => prev.filter((l) => l.id !== lead.id));
+  }
+
+  function inviteContact(invite: ContactInvite) {
+    const initials = invite.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+    const lead: PipelineLead = {
+      id: `I${Date.now()}`,
+      slug: invite.name.toLowerCase().trim().replace(/\s+/g, "-"),
+      name: invite.name,
+      initials,
+      goal: invite.goal,
+      timeline: "",
+      stage: "invited",
+      source: "own-contact",
+      completedNote: "Invite sent · just now",
+      checklist: ["Join Fincaree", "Complete profile", "Share consent"],
+      remindersSent: 0,
+      statusTag: "Invite sent",
+      ctaLabel: "Resend invite →",
+      lastActivitySort: 0,
+      highIntent: false,
+      meetingThisWeek: false,
+    };
+    setAllLeads((prev) => [...prev, lead]);
+    setNewTab("invited");
+    setInviteNotice(`Invite sent to ${invite.name}. They're in New leads › Invited until they join.`);
+    window.setTimeout(() => setInviteNotice(null), 8000);
+  }
+
+  function goToColumn(key: string) {
+    if (key === "new") setNewTab(suggested.length > 0 ? "suggested" : "invited");
+    document.getElementById(`stage-${key}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  }
 
   function openLead(lead: PipelineLead) {
     setSelectedLead(lead);
@@ -71,24 +142,26 @@ export default function LeadPipelinePage() {
 
   return (
     <AppShell>
-      <div className="px-6 py-5 max-w-[1440px] mx-auto space-y-4">
-        {/* Page header */}
-        <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">Lead Pipeline</h1>
-          <p className="text-sm text-[var(--text-tertiary)] mt-0.5">Turn conversations into long-term client relationships</p>
-        </div>
-
+      <PageFrame width="full" title="Lead Pipeline" description="Turn conversations into long-term client relationships" actions={
+        <Button variant="primary" size="sm" leadingIcon={<UserPlus size={14} strokeWidth={2} />} onClick={() => setInviteOpen(true)}>
+          Invite contact
+        </Button>
+      }>
         {/* Upcoming Meetings | Today's Focus | AI Conversion Brief */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
-          <UpcomingMeetingsCard onOpenLead={openLead} />
+        <PageGrid>
+          <div className="col-span-12 lg:col-span-4 *:h-full"><UpcomingMeetingsCard onOpenLead={openLead} /></div>
+          <div className="col-span-12 lg:col-span-4 *:h-full">
           <TodaysFocus
             onSelect={(f) => {
               setFilter(f);
               document.getElementById("pipeline-toolbar")?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
           />
-          <AiConversionBrief onOpenLead={openLead} />
-        </div>
+          </div>
+          <div className="col-span-12 lg:col-span-4 *:h-full"><AiConversionBrief onOpenLead={openLead} /></div>
+        </PageGrid>
+
+        <StageOverviewStrip leads={leads} onSelect={goToColumn} />
 
         {/* Pipeline toolbar — scopes the board below */}
         <div id="pipeline-toolbar" className="flex items-center justify-between gap-2 scroll-mt-4">
@@ -115,16 +188,27 @@ export default function LeadPipelinePage() {
                 <SelectItem key={f} value={f}>{FILTER_LABEL[f]}</SelectItem>
               ))}
             </SelectField>
+            <SelectField
+              size="sm"
+              value={sourceFilter}
+              onValueChange={(v: unknown) => setSourceFilter(v as SourceFilter)}
+              className="w-[190px]"
+              aria-label="Filter by source"
+              items={SOURCE_FILTER_LABEL}
+            >
+              {(Object.keys(SOURCE_FILTER_LABEL) as SourceFilter[]).map((f) => (
+                <SelectItem key={f} value={f}>{SOURCE_FILTER_LABEL[f]}</SelectItem>
+              ))}
+            </SelectField>
           </div>
-          <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />}>
-            Add Lead
-          </Button>
         </div>
+        <p role="status" aria-live="polite" className="text-xs text-[var(--text-secondary)] min-h-0 empty:hidden">{inviteNotice}</p>
 
         {/* Pipeline board */}
-        <PipelineBoard leads={leads} onOpenLead={openLead} />
-      </div>
+        <PipelineBoard leads={leads} onOpenLead={openLead} onAcceptLead={acceptLead} onDeclineLead={declineLead} newTab={newTab} onNewTabChange={setNewTab} />
+      </PageFrame>
 
+      <InviteContactDialog open={inviteOpen} onOpenChange={setInviteOpen} onInvite={inviteContact} />
       <LeadDrawer lead={selectedLead} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </AppShell>
   );
