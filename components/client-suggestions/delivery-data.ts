@@ -458,6 +458,12 @@ export interface NurtureLead {
   /** Messages already sent to them. The next one is steps[sentCount]. */
   sentCount: number;
   nextSend: string | null;
+  /** The advisor paused this lead only; the rest of the loop carries on. */
+  held?: boolean;
+  /** Messages the advisor skipped for this lead (counted in sentCount, never sent). */
+  skipped?: number;
+  /** The lead opted out. Final: the advisor cannot resume them. */
+  optedOut?: boolean;
 }
 
 export interface NurtureSequence {
@@ -468,7 +474,11 @@ export interface NurtureSequence {
   audience: string;
   leads: number;
   converted: number;
-  status: "active" | "paused";
+  /** "scheduled": created by the advisor, not started yet. */
+  status: "active" | "paused" | "scheduled";
+  /** Scheduled loops only: the day Day 1 goes out (YYYY-MM-DD) and the time of day (HH:mm). */
+  startsOn?: string;
+  sendTime?: string;
   steps: NurtureStep[];
   /** Every lead inside, most recent first. Filled in by `withLeads` below. */
   leadList: NurtureLead[];
@@ -508,7 +518,7 @@ const RAW_SEQUENCES: NurtureSequence[] = [
 ];
 
 const LEAD_NAMES = [
-  "Rajesh Kulkarni", "Meenal Shetty", "Sandeep Arora", "Kiran Bhat", "Pallavi Naik", "Tanvi Deshpande", "Amit Rathore",
+  "Karan Singh", "Devang Shah", "Rahul Verma", "Kiran Bhat", "Pallavi Naik", "Tanvi Deshpande", "Amit Rathore",
   "Soumya Pillai", "Harsha Reddy", "Nisha Menon", "Vivek Anand", "Charu Bansal", "Deepti Shah", "Gaurav Mehra",
   "Ishita Roy", "Jatin Kapoor", "Lavanya Iyer", "Mukesh Tiwari", "Namrata Sen", "Omkar Joshi", "Preeti Nair", "Rohan Dutta",
 ];

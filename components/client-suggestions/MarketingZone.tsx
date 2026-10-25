@@ -7,384 +7,443 @@
    subscribed. A sequence sends them a few approved messages on
    set days, and stops by itself when they subscribe.
 
-   Layout: what this is and how it works → totals → a searchable
-   list of sequences beside the one you're looking at (schedule,
-   results, a filterable, paged table of its leads) → safeguards.
-   Built for many sequences and many leads: the list and the table
-   search, filter and scroll or page instead of growing the page.
+   One question per level:
+     The page   → which sequences are running, and are they working?
+     A sequence → what goes out, and when?  (open a row)
+     Its leads  → who is in it?             (one more click)
 
-   Sourcing: Fincaree Badge, Switch, ui/table.
+   The advisor schedules their own loops from content that has
+   already passed compliance. Finny (the intelligence layer) reads
+   the pipeline and the results, and prepares a loop for the advisor
+   to review — it never schedules or sends anything itself.
+
+   The explainer and the safeguards are a sentence and a
+   disclosure, not sections.
+
+   Sourcing: Fincaree Badge, Switch, ui/table via DataTable.
    ============================================================ */
 
 import { useState } from "react";
 import { Badge } from "@/components/fincaree/badge";
-import { Input } from "@/components/fincaree/input";
 import { Switch } from "@/components/fincaree/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/fincaree/tabs";
-import { DataTable, type DataTableColumn } from "@/components/fincaree/data-table";
-import { Ban, CalendarClock, CheckCircle2, ChevronDown, Megaphone, MessageSquareText, PhoneCall, Search, ShieldCheck, UserCheck } from "lucide-react";
+import { Button } from "@/components/fincaree/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AIReviewNotice, FinnyReasoning, InsightList } from "@/components/finny/ai-pattern";
+import { KpiCard, type KpiEmphasis } from "@/components/layout/KpiCard";
+import { CalendarClock, ChevronDown, Info, MailOpen, Megaphone, Repeat, ShieldCheck, Sparkles, UserCheck, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type ContentItem } from "./content-data";
-import { NURTURE_RULES, NURTURE_SEQUENCES, holdReason, isSendableToLeads, type NurtureLead, type NurtureSequence } from "./delivery-data";
-import { getTypeVisual, typeLabel } from "./content-visual";
-
-type SeqFilter = "all" | "sending" | "paused";
+import { NURTURE_RULES, holdReason, isSendableToLeads, type NurtureSequence } from "./delivery-data";
+import { LoopLeadsTable } from "./LoopLeadsTable";
+import { marketing, useMarketing } from "./marketing-store";
+import { typeLabel } from "./content-visual";
+import { ScheduleLoopDialog } from "./ScheduleLoopDialog";
+import { ContentPreviewDialog } from "./ContentPreview";
+import { loopAudiences, overviewInsights, prepareLoop, sequenceInsights, unenrolledLeads, type PreparedLoop } from "./marketing-intelligence";
 
 const pct = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
 
-const HOW_IT_WORKS = [
-  { icon: PhoneCall, title: "Discovery call", body: "The lead talks to an advisor but doesn't subscribe." },
-  { icon: MessageSquareText, title: "Joins a sequence", body: "They're matched to one by what the call was about." },
-  { icon: CalendarClock, title: "Messages go out", body: "Approved content is sent on the days you set." },
-  { icon: UserCheck, title: "Stops on subscribing", body: "Once they subscribe, the messages stop on their own." },
-];
+const sentOf = (s: NurtureSequence) => s.steps.reduce((n, st) => n + st.sent, 0);
+const openedOf = (s: NurtureSequence) => s.steps.reduce((n, st) => n + st.opened, 0);
+
+const fmtISO = (iso: string, plusDays = 0) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + plusDays);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+};
+const TIME_SHORT: Record<string, string> = { "09:00": "9:00 AM", "13:00": "1:00 PM", "18:00": "6:00 PM" };
 
 export function MarketingZone({ items }: { items: ContentItem[] }) {
   const byId = new Map(items.map((i) => [i.id, i]));
-  const [selectedId, setSelectedId] = useState(NURTURE_SEQUENCES[0].id);
-  /* Local for now: pausing here doesn't reach a sending service yet. */
-  const [paused, setPaused] = useState<Record<string, boolean>>(
-    Object.fromEntries(NURTURE_SEQUENCES.map((s) => [s.id, s.status === "paused"])),
-  );
+  /* Shared with the Lead Pipeline drawer. In-session only: nothing here reaches a sending service yet. */
+  const { loops, paused } = useMarketing();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogKey, setDialogKey] = useState(0);
+  const [prefill, setPrefill] = useState<PreparedLoop | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
 
-  const [seqQuery, setSeqQuery] = useState("");
-  const [seqFilter, setSeqFilter] = useState<SeqFilter>("all");
-  const [showHow, setShowHow] = useState(true);
+  const audiences = loopAudiences(loops);
+  const unenrolled = unenrolledLeads(loops);
+  const prepared = audiences.length > 0 ? prepareLoop(items, audiences[0]) : null;
+  const insights = overviewInsights(loops, paused, byId);
 
-  const visibleSeqs = NURTURE_SEQUENCES.filter(
-    (sq) =>
-      sq.name.toLowerCase().includes(seqQuery.trim().toLowerCase()) &&
-      (seqFilter === "all" || (seqFilter === "paused") === Boolean(paused[sq.id])),
-  );
+  function openDialog(loop: PreparedLoop | null) {
+    setPrefill(loop);
+    setDialogKey((k) => k + 1);
+    setDialogOpen(true);
+  }
 
-  const selected = NURTURE_SEQUENCES.find((s) => s.id === selectedId) ?? NURTURE_SEQUENCES[0];
-  const activeCount = NURTURE_SEQUENCES.filter((s) => !paused[s.id]).length;
-  const totalLeads = NURTURE_SEQUENCES.reduce((n, s) => n + s.leads, 0);
-  const totalConverted = NURTURE_SEQUENCES.reduce((n, s) => n + s.converted, 0);
-  const allSteps = NURTURE_SEQUENCES.flatMap((s) => s.steps);
-  const totalSent = allSteps.reduce((n, st) => n + st.sent, 0);
-  const totalOpened = allSteps.reduce((n, st) => n + st.opened, 0);
+  function scheduleLoop(loop: NurtureSequence) {
+    marketing.scheduleLoop(loop);
+    setNotice(`“${loop.name}” is scheduled. It starts on ${fmtISO(loop.startsOn ?? "")} for ${loop.leads} lead${loop.leads === 1 ? "" : "s"}.`);
+    window.setTimeout(() => setNotice(null), 8000);
+  }
 
-  const stats = [
-    { label: "Leads in sequences", value: String(totalLeads), hint: "across all sequences" },
-    { label: "Sequences sending", value: `${activeCount} of ${NURTURE_SEQUENCES.length}`, hint: "the rest are paused" },
-    { label: "Messages sent", value: String(totalSent), hint: `${pct(totalOpened, totalSent)}% were opened` },
-    { label: "Became clients", value: String(totalConverted), hint: `${pct(totalConverted, totalLeads + totalConverted)}% of all leads` },
+  const totalLeads = loops.reduce((n, s) => n + s.leads, 0);
+  const totalConverted = loops.reduce((n, s) => n + s.converted, 0);
+  const totalSent = loops.reduce((n, s) => n + sentOf(s), 0);
+  const totalOpened = loops.reduce((n, s) => n + openedOf(s), 0);
+
+  /* Four questions an advisor asks of their loops, in order:
+     is it working → are they being read → what's running → who's being missed. */
+  const sending = loops.filter((l) => l.status !== "scheduled" && !paused[l.id]).length;
+  const scheduled = loops.filter((l) => l.status === "scheduled" && !paused[l.id]).length;
+  const onHold = loops.filter((l) => paused[l.id]).length;
+  const hasLoopReady = Boolean(prepared && prepared.steps.length > 0);
+
+  const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const stats: { label: string; icon: React.ReactNode; value: string; detail: string; cta: string; onCta: () => void; emphasis?: KpiEmphasis }[] = [
+    {
+      label: "Became clients",
+      icon: <UserCheck size={18} strokeWidth={1.75} />,
+      value: String(totalConverted),
+      detail: `${pct(totalConverted, totalLeads + totalConverted)}% of leads who entered a loop`,
+      cta: "See by loop",
+      onCta: () => goTo("marketing-loops"),
+    },
+    {
+      label: "Messages opened",
+      icon: <MailOpen size={18} strokeWidth={1.75} />,
+      value: totalSent > 0 ? `${pct(totalOpened, totalSent)}%` : "—",
+      detail: totalSent > 0 ? `${totalOpened} of ${totalSent} messages sent` : "Nothing sent yet",
+      cta: "What's working",
+      onCta: () => {
+        setShowInsights(true);
+        goTo("marketing-finny");
+      },
+    },
+    {
+      label: "In loops now",
+      icon: <Repeat size={18} strokeWidth={1.75} />,
+      value: String(totalLeads),
+      detail: [`${sending} sending`, scheduled > 0 && `${scheduled} scheduled`, onHold > 0 && `${onHold} paused`].filter(Boolean).join(" · "),
+      cta: "View loops",
+      onCta: () => goTo("marketing-loops"),
+    },
+    {
+      label: "Not in any loop",
+      icon: <UserMinus size={18} strokeWidth={1.75} />,
+      value: String(unenrolled.length),
+      detail: unenrolled.length === 0 ? "Everyone is covered" : hasLoopReady ? `Finny has a loop ready for ${audiences[0].leads.length} of them` : "No approved content to send them",
+      cta: hasLoopReady ? "Review prepared loop" : "Schedule a loop",
+      onCta: () => openDialog(hasLoopReady ? prepared : null),
+      emphasis: unenrolled.length > 0 ? "warning" : "default",
+    },
   ];
 
   return (
-    <section aria-label="Marketing" className="space-y-6">
-      {/* ══ What this is ══ */}
+    <section aria-label="Marketing" className="space-y-5">
+      {/* ══ What this is — one paragraph, safeguards one click away ══ */}
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 shrink-0 rounded-[var(--radius-md)] flex items-center justify-center bg-[var(--bg-brand-subtle)] text-[var(--icon-brand-primary)]">
           <Megaphone size={18} strokeWidth={1.75} aria-hidden="true" />
         </div>
-        <div>
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Marketing — follow-up for leads who didn&apos;t subscribe</h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5 max-w-[720px]">
-            After a discovery call, a lead can join a short series of messages that builds trust over a few weeks. This is separate from content
-            you send to subscribed clients. Nothing here reaches a client, and client content is never used for marketing.
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <button
-          type="button"
-          aria-expanded={showHow}
-          onClick={() => setShowHow((v) => !v)}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--text-brand-primary)] hover:underline"
-        >
-          How it works
-          <ChevronDown size={14} strokeWidth={2} className={cn("transition-transform", showHow && "rotate-180")} aria-hidden="true" />
-        </button>
-        <ol hidden={!showHow} aria-label="How it works" className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {HOW_IT_WORKS.map((step, i) => (
-            <li key={step.title} className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] px-4 py-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-primary)] text-xs font-semibold text-[var(--text-secondary)] tabular-nums border border-[var(--border-tertiary)]">
-                {i + 1}
-              </span>
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)]">
-                  <step.icon size={14} strokeWidth={1.75} className="text-[var(--icon-secondary)]" aria-hidden="true" />
-                  {step.title}
-                </p>
-                <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{step.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      {/* ══ Totals ══ */}
-      <dl className="grid grid-cols-2 xl:grid-cols-4 rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] divide-x divide-y xl:divide-y-0 divide-[var(--border-tertiary)]">
-        {stats.map((st) => (
-          <div key={st.label} className="px-5 py-4">
-            <dt className="text-xs font-medium text-[var(--text-tertiary)]">{st.label}</dt>
-            <dd className="text-xl font-bold text-[var(--text-primary)] tabular-nums mt-1">{st.value}</dd>
-            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{st.hint}</p>
-          </div>
-        ))}
-      </dl>
-
-      {/* ══ Sequences: list + detail ══ */}
-      <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start">
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-            Sequences <span className="font-normal text-[var(--text-tertiary)]">· {NURTURE_SEQUENCES.length}</span>
-          </h3>
-          <Input
-            size="sm"
-            aria-label="Search sequences"
-            placeholder="Search sequences…"
-            value={seqQuery}
-            onChange={(e) => setSeqQuery(e.target.value)}
-            leadingIcon={<Search size={14} strokeWidth={1.75} />}
-          />
-          <Tabs value={seqFilter} onValueChange={(v) => setSeqFilter(v as SeqFilter)} variant="pill">
-            <TabsList aria-label="Filter sequences" className="w-full">
-              <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-              <TabsTrigger value="sending" className="flex-1">Sending</TabsTrigger>
-              <TabsTrigger value="paused" className="flex-1">Paused</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <ul className="relative max-h-[420px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] divide-y divide-[var(--border-tertiary)]">
-            {visibleSeqs.map((seq) => {
-              const isPaused = paused[seq.id];
-              const on = seq.id === selected.id;
-              return (
-                <li key={seq.id}>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Marketing — follow-up for leads who didn&apos;t subscribe</h2>
+            <Popover>
+              <PopoverTrigger
+                render={
                   <button
                     type="button"
-                    aria-pressed={on}
-                    onClick={() => setSelectedId(seq.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors",
-                      on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]",
-                    )}
+                    aria-label="What's always guaranteed"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--icon-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--icon-secondary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-brand)]"
                   >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{seq.name}</span>
-                      <span className="block text-xs text-[var(--text-tertiary)] tabular-nums">
-                        {seq.leads} leads · {seq.steps.length} messages
-                      </span>
-                    </span>
-                    <Badge size="sm" color={isPaused ? "gray" : "success"}>
-                      {isPaused ? "Paused" : "Sending"}
-                    </Badge>
+                    <Info size={15} strokeWidth={1.75} aria-hidden="true" />
                   </button>
-                </li>
-              );
-            })}
-            {visibleSeqs.length === 0 && (
-              <li className="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">No sequences match.</li>
-            )}
-          </ul>
+                }
+              />
+              <PopoverContent side="bottom" align="start">
+                <p className="text-xs font-semibold text-[var(--text-primary)] mb-1.5">Always guaranteed</p>
+                <ul className="space-y-1.5">
+                  {NURTURE_RULES.map((rule) => (
+                    <li key={rule} className="flex items-start gap-2 text-xs text-[var(--text-secondary)] leading-snug">
+                      <ShieldCheck size={13} strokeWidth={1.75} className="mt-px text-[var(--icon-status-success)] shrink-0" aria-hidden="true" />
+                      {rule}
+                    </li>
+                  ))}
+                </ul>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] mt-0.5 max-w-[720px]">
+            Leads who had a discovery call but didn&apos;t subscribe get a short series of approved messages. It stops the moment they subscribe.
+          </p>
         </div>
+        <Button variant="primary" size="sm" className="shrink-0" leadingIcon={<CalendarClock size={14} strokeWidth={2} />} onClick={() => openDialog(null)}>
+          Schedule a loop
+        </Button>
+      </div>
 
-        <div className="flex min-w-0 flex-col gap-6">
-          <SequenceDetail
-            key={selected.id}
-            seq={selected}
-            byId={byId}
-            isPaused={paused[selected.id]}
-            onPausedChange={(v) => setPaused((p) => ({ ...p, [selected.id]: v }))}
-          />
+      <p role="status" aria-live="polite" className="text-sm text-[var(--text-secondary)] empty:hidden">{notice}</p>
 
-        {/* ══ Safeguards ══ */}
-        <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] px-5 py-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Built-in safeguards</h3>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Every sequence follows these. You can&apos;t switch them off.</p>
-          <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-            {NURTURE_RULES.map((rule) => (
-              <li key={rule} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <ShieldCheck size={14} strokeWidth={1.75} className="text-[var(--icon-status-success)] shrink-0" aria-hidden="true" />
-                {rule}
-              </li>
-            ))}
-          </ul>
-        </div>
-        </div>
+      {/* ══ Finny — one row; the extra insights wait behind a toggle ══ */}
+      {(prepared && prepared.steps.length > 0) || insights.length > 0 ? (
+        <section
+          id="marketing-finny"
+          aria-label="Finny suggestions for marketing"
+          className="rounded-[var(--radius-xl)] border border-[var(--border-brand-secondary)] bg-[var(--bg-brand-subtle)] px-4 py-3"
+        >
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+            <span className="w-7 h-7 shrink-0 rounded-full bg-[var(--bg-brand-primary)] flex items-center justify-center" aria-hidden="true">
+              <Sparkles size={13} strokeWidth={2} className="text-white" />
+            </span>
+
+            <div className="min-w-0 flex-1 basis-72">
+              <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug">
+                {prepared && prepared.steps.length > 0
+                  ? prepared.goal
+                    ? `Start a ${prepared.goal.toLowerCase()} follow-up loop for ${audiences[0].leads.length} leads who aren't in any loop yet`
+                    : `Start a check-in loop for ${audiences[0].leads.length} leads who have been quiet for 5+ days`
+                  : `Finny has ${insights.length} thing${insights.length === 1 ? "" : "s"} to flag`}
+              </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--text-tertiary)]">
+                {prepared && prepared.steps.length > 0 && <span>{prepared.steps.length} messages prepared from approved content</span>}
+                <AIReviewNotice />
+                {prepared && prepared.steps.length > 0 && (
+                  <FinnyReasoning
+                    considered={[
+                      "Leads who had a discovery call and haven't subscribed",
+                      `Which of them are already in a loop (${unenrolled.length} are not)`,
+                      prepared.topicLabel ? `Approved-for-leads content on ${prepared.topicLabel}` : "Approved-for-leads content",
+                      "Open rates from your earlier messages",
+                    ]}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {insights.length > 0 && prepared && prepared.steps.length > 0 && (
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  aria-expanded={showInsights}
+                  trailingIcon={<ChevronDown size={14} strokeWidth={2} className={cn("transition-transform", showInsights && "rotate-180")} />}
+                  onClick={() => setShowInsights((v) => !v)}
+                >
+                  {insights.length} insight{insights.length === 1 ? "" : "s"}
+                </Button>
+              )}
+              {prepared && prepared.steps.length > 0 && (
+                <Button variant="primary" size="sm" onClick={() => openDialog(prepared)}>
+                  Review prepared loop
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {insights.length > 0 && (showInsights || !(prepared && prepared.steps.length > 0)) && (
+            <InsightList insights={insights} className="mt-2 border-t border-[var(--border-brand-tint)] pt-1 divide-[var(--border-brand-tint)]" />
+          )}
+        </section>
+      ) : null}
+
+      <ScheduleLoopDialog
+        key={dialogKey}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        items={items}
+        audiences={audiences}
+        initial={prefill}
+        onSchedule={scheduleLoop}
+      />
+
+      {/* ══ KPIs — same cards as Meetings and Reports ══ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((st) => (
+          <KpiCard key={st.label} icon={st.icon} label={st.label} value={st.value} detail={st.detail} cta={st.cta} onCta={st.onCta} emphasis={st.emphasis} />
+        ))}
+      </div>
+
+      {/* ══ Sequences — one list ══ */}
+      <div id="marketing-loops" className="scroll-mt-4">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
+          Sequences <span className="font-normal text-[var(--text-tertiary)]">· {loops.length}</span>
+        </h3>
+        <ul className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] divide-y divide-[var(--border-tertiary)]">
+          {loops.map((seq) => (
+            <SequenceRow
+              key={seq.id}
+              seq={seq}
+              byId={byId}
+              isPaused={Boolean(paused[seq.id])}
+              otherLoops={loops.filter((l) => l.id !== seq.id)}
+              onPausedChange={(v) => marketing.setLoopPaused(seq.id, v)}
+            />
+          ))}
+        </ul>
       </div>
     </section>
   );
 }
 
-/* ─── One sequence, in full ─── */
+/* ─── One sequence: a summary row that opens into its schedule ─── */
 
-function SequenceDetail({
+function SequenceRow({
   seq,
   byId,
   isPaused,
+  otherLoops,
   onPausedChange,
 }: {
   seq: NurtureSequence;
   byId: Map<string, ContentItem>;
   isPaused: boolean;
+  otherLoops: NurtureSequence[];
   onPausedChange: (paused: boolean) => void;
 }) {
-  const steps = seq.steps.map((s) => ({ ...s, item: byId.get(s.contentId) }));
-  const blocked = steps.filter((s) => !s.item || !isSendableToLeads(s.item));
-  const maxSent = Math.max(...steps.map((s) => s.sent), 1);
-
-
-  const leadColumns: DataTableColumn<NurtureLead>[] = [
-    {
-      id: "lead",
-      header: "Lead",
-      cell: (l) => (
-        <>
-          <p className="text-sm font-medium text-[var(--text-primary)]">{l.name}</p>
-          <p className="text-xs text-[var(--text-tertiary)]">{l.source}</p>
-        </>
-      ),
-    },
-    { id: "joined", header: "Joined", width: "w-28", className: "text-sm text-[var(--text-secondary)] tabular-nums", cell: (l) => l.joined },
-    {
-      id: "sent",
-      header: "Messages sent",
-      width: "w-40",
-      cell: (l) => (
-        <div className="flex items-center gap-2">
-          <span aria-hidden="true" className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-            <span className="block h-full rounded-full bg-[var(--bg-brand-primary)]" style={{ width: `${pct(l.sentCount, seq.steps.length)}%` }} />
-          </span>
-          <span className="text-xs text-[var(--text-secondary)] tabular-nums whitespace-nowrap">
-            {l.sentCount} of {seq.steps.length}
-          </span>
-        </div>
-      ),
-    },
-    {
-      id: "next",
-      header: "Next message",
-      width: "w-36",
-      className: "text-sm text-[var(--text-secondary)] tabular-nums",
-      cell: (l) => (l.sentCount >= seq.steps.length ? "Finished" : isPaused ? "On hold" : (l.nextSend ?? "On hold")),
-    },
-  ];
+  const [open, setOpen] = useState(false);
+  const panelId = `seq-${seq.id}`;
 
   return (
-    <article aria-label={seq.name} className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)]">
-      {/* Header: what it is, and the one control */}
-      <header className="flex items-start justify-between gap-4 flex-wrap px-5 py-4 border-b border-[var(--border-tertiary)]">
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">{seq.name}</h3>
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5">{seq.description}</p>
-          <p className="text-xs text-[var(--text-tertiary)] mt-1">Who joins: {seq.audience}</p>
-        </div>
-        <Switch size="sm" checked={!isPaused} onCheckedChange={(on) => onPausedChange(!on)}>
-          <span className="text-sm font-medium text-[var(--text-primary)]">{isPaused ? "Paused" : "Sending"}</span>
+    <li>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 basis-64 items-center gap-2 text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-brand)]"
+        >
+          <ChevronDown size={16} strokeWidth={2} className={cn("shrink-0 text-[var(--icon-tertiary)] transition-transform", !open && "-rotate-90")} aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-[var(--text-primary)]">{seq.name}</span>
+            <span className="block truncate text-xs text-[var(--text-tertiary)]">{seq.audience}</span>
+          </span>
+        </button>
+
+        <dl className="flex items-center gap-6">
+          <RowStat label="Leads" value={String(seq.leads)} />
+          {seq.status === "scheduled" && seq.startsOn ? (
+            <RowStat label="Starts" value={`${fmtISO(seq.startsOn)}, ${TIME_SHORT[seq.sendTime ?? "09:00"] ?? ""}`} />
+          ) : (
+            <>
+              <RowStat label="Opened" value={sentOf(seq) > 0 ? `${pct(openedOf(seq), sentOf(seq))}%` : "—"} />
+              <RowStat label="Became clients" value={String(seq.converted)} />
+            </>
+          )}
+        </dl>
+
+        <Switch size="sm" checked={!isPaused} onCheckedChange={(on) => onPausedChange(!on)} aria-label={`${seq.name}: ${isPaused ? "paused" : seq.status === "scheduled" ? "scheduled" : "sending"}`}>
+          <span className="text-sm font-medium text-[var(--text-primary)] w-[72px] inline-block">{isPaused ? "Paused" : seq.status === "scheduled" ? "Scheduled" : "Sending"}</span>
         </Switch>
-      </header>
+      </div>
+
+      {open && (
+        <div id={panelId} className="border-t border-[var(--border-tertiary)] bg-[var(--bg-subtle)] px-4 py-4">
+          <SequenceDetail seq={seq} byId={byId} isPaused={isPaused} otherLoops={otherLoops} />
+        </div>
+      )}
+    </li>
+  );
+}
+
+function RowStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-[var(--text-tertiary)]">{label}</dt>
+      <dd className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/* ─── What goes out, and when. Leads are one click further. ─── */
+
+function SequenceDetail({ seq, byId, isPaused, otherLoops }: { seq: NurtureSequence; byId: Map<string, ContentItem>; isPaused: boolean; otherLoops: NurtureSequence[] }) {
+  const [showLeads, setShowLeads] = useState(false);
+  const [previewItem, setPreviewItem] = useState<ContentItem | null>(null);
+  const steps = seq.steps.map((s) => ({ ...s, item: byId.get(s.contentId) }));
+  const blocked = steps.filter((s) => !s.item || !isSendableToLeads(s.item));
+  const readOut = sequenceInsights(seq, (id) => byId.get(id)?.title ?? "This message");
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--text-secondary)]">{seq.description}</p>
 
       {isPaused && (
-        <p role="status" className="px-5 py-2.5 text-xs text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-b border-[var(--border-tertiary)]">
-          Paused — no messages go out and leads stay where they are. Switch it back on to carry on from the next message.
+        <p role="status" className="text-xs text-[var(--text-secondary)]">
+          Paused — no messages go out. Switch it back on to carry on from the next message.
         </p>
       )}
 
-      {/* Schedule: what goes out, when, and how it did */}
-      <div className="px-5 py-4">
+      {/* Schedule: day, what, how it did */}
+      <div>
         <h4 className="text-sm font-semibold text-[var(--text-primary)]">Schedule</h4>
         <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Days are counted from the day the lead joins.</p>
-
-        <ol className="mt-3">
-          {steps.map((s, i) => {
+        <ol className="mt-2 divide-y divide-[var(--border-tertiary)] border-y border-[var(--border-tertiary)]">
+          {steps.map((s) => {
             const ok = s.item && isSendableToLeads(s.item);
-            const v = s.item ? getTypeVisual(s.item) : null;
             return (
-              <li key={`${seq.id}-${s.day}`} className="relative flex gap-4 pb-5 last:pb-0">
-                {i < steps.length - 1 && (
-                  <span aria-hidden="true" className="absolute left-7 top-9 bottom-0 w-px bg-[var(--border-tertiary)]" />
-                )}
-                <span className="flex h-7 w-14 shrink-0 items-center justify-center rounded-full border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] text-xs font-semibold text-[var(--text-primary)] tabular-nums">
-                  Day {s.day}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {v && (
-                        <span className={cn("w-6 h-6 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center", v.bgColor, v.iconColor)} aria-hidden="true">
-                          {v.icon}
-                        </span>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{s.item?.title ?? "Content unavailable"}</p>
-                        {s.item && <p className="text-xs text-[var(--text-tertiary)]">{typeLabel(s.item)}</p>}
-                      </div>
-                    </div>
-                    {ok ? (
-                      <Badge size="sm" color="success" leadingIcon={<CheckCircle2 size={11} strokeWidth={2} />}>
-                        Approved for leads
-                      </Badge>
-                    ) : (
-                      <Badge size="sm" color="warning" leadingIcon={<Ban size={11} strokeWidth={2} />}>
-                        {s.item ? (holdReason(s.item, "leads") ?? "Not for leads") : "Content unavailable"}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Results: how far it got and how many opened it */}
-                  <div className="mt-2.5 flex items-center gap-3">
-                    <div
-                      role="img"
-                      aria-label={`${s.sent} sent, ${s.opened} opened`}
-                      className="h-1.5 flex-1 max-w-[220px] overflow-hidden rounded-full bg-[var(--bg-tertiary)]"
+              <li key={`${seq.id}-${s.day}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
+                <span className="w-14 shrink-0 text-xs font-semibold text-[var(--text-secondary)] tabular-nums">Day {s.day}</span>
+                <span className="min-w-0 flex-1 basis-48">
+                  {s.item ? (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewItem(s.item!)}
+                      className="block max-w-full truncate text-left text-sm font-medium text-[var(--text-primary)] hover:text-[var(--text-brand-primary)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-brand)] rounded-sm"
+                      aria-label={`Preview ${s.item.title}`}
                     >
-                      <div className="h-full rounded-full bg-[var(--bg-brand-primary)]" style={{ width: `${pct(s.sent, maxSent)}%` }} />
-                    </div>
-                    <p className="text-xs text-[var(--text-secondary)] tabular-nums">
-                      {s.sent} sent · {s.opened} opened ({pct(s.opened, s.sent)}%)
-                    </p>
-                  </div>
-                </div>
+                      {s.item.title}
+                    </button>
+                  ) : (
+                    <span className="block truncate text-sm font-medium text-[var(--text-primary)]">Content unavailable</span>
+                  )}
+                  {s.item && <span className="block text-xs text-[var(--text-tertiary)]">{typeLabel(s.item)}</span>}
+                </span>
+                {ok && seq.status === "scheduled" && seq.startsOn ? (
+                  <span className="text-xs text-[var(--text-secondary)] tabular-nums">Goes out {fmtISO(seq.startsOn, s.day - 1)}</span>
+                ) : ok ? (
+                  <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+                    {s.sent} sent · {pct(s.opened, s.sent)}% opened
+                  </span>
+                ) : (
+                  <Badge size="sm" color="warning">
+                    {s.item ? (holdReason(s.item, "leads") ?? "Not for leads") : "Content unavailable"}
+                  </Badge>
+                )}
               </li>
             );
           })}
         </ol>
-
-        <p className="text-xs text-[var(--text-tertiary)] mt-4">
-          {blocked.length > 0
-            ? `${blocked.length} message${blocked.length === 1 ? "" : "s"} can't go out until it's Approved and written for leads — the sequence skips ${blocked.length === 1 ? "it" : "them"} until then.`
-            : "Every message is Approved and written for leads."}
-        </p>
-      </div>
-
-      {/* Leads inside: the shared table searches, filters and pages, so it stays usable at any size */}
-      <div className="border-t border-[var(--border-tertiary)]">
-        <div className="px-5 pt-4 pb-3">
-          <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-            Leads in this sequence <span className="font-normal text-[var(--text-tertiary)]">· {seq.leads}</span>
-          </h4>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-            {seq.converted} lead{seq.converted === 1 ? "" : "s"} from this sequence became clients and left it.
+        {blocked.length > 0 && (
+          <p className="text-xs text-[var(--text-tertiary)] mt-2">
+            {blocked.length === 1 ? "One message is" : `${blocked.length} messages are`} on hold until approved and written for leads. The sequence skips{" "}
+            {blocked.length === 1 ? "it" : "them"} until then.
           </p>
-        </div>
-        <DataTable
-          bare
-          aria-label={`Leads in ${seq.name}`}
-          rows={seq.leadList}
-          columns={leadColumns}
-          getRowId={(l) => l.id}
-          pageSize={8}
-          noun="leads"
-          search={{ placeholder: "Search leads…", width: "w-[200px]", getText: (l) => [l.name, l.source] }}
-          filters={[
-            {
-              id: "progress",
-              kind: "tabs",
-              label: "Filter leads",
-              options: [
-                { value: "waiting", label: "In progress" },
-                { value: "finished", label: "Finished" },
-              ],
-              match: (l, v) => (v === "finished") === l.sentCount >= seq.steps.length,
-            },
-          ]}
-        />
+        )}
       </div>
-    </article>
+
+      {/* What Finny sees in this loop's own results */}
+      {seq.status !== "scheduled" && readOut.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-[var(--text-primary)]">What Finny sees</h4>
+          <InsightList insights={readOut} className="mt-1" />
+        </div>
+      )}
+
+      <ContentPreviewDialog item={previewItem} open={previewItem !== null} onOpenChange={(o) => !o && setPreviewItem(null)} />
+
+      {/* Leads — hidden until asked for */}
+      <div>
+        <button
+          type="button"
+          aria-expanded={showLeads}
+          onClick={() => setShowLeads((v) => !v)}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--text-brand-primary)] hover:underline"
+        >
+          {showLeads ? "Hide leads" : `Show and manage the ${seq.leads} leads in this sequence`}
+          <ChevronDown size={14} strokeWidth={2} className={cn("transition-transform", showLeads && "rotate-180")} aria-hidden="true" />
+        </button>
+        {showLeads && (
+          <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] overflow-hidden">
+            <LoopLeadsTable seq={seq} loopPaused={isPaused} byId={byId} otherLoops={otherLoops} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

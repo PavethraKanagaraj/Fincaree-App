@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Badge } from "@/components/fincaree/badge";
 import { Button } from "@/components/fincaree/button";
 import { GoalTags } from "./GoalTags";
+import { LeadMarketingSection } from "./LeadMarketingSection";
 import { PipelineLead, PIPELINE_STAGES } from "./pipeline-data";
 import { Sparkles, ArrowRight, Calendar } from "lucide-react";
 
@@ -52,9 +53,11 @@ interface LeadDrawerProps {
   lead: PipelineLead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Open the schedule dialog for this one lead. */
+  onScheduleContent: (lead: PipelineLead) => void;
 }
 
-export function LeadDrawer({ lead, open, onOpenChange }: LeadDrawerProps) {
+export function LeadDrawer({ lead, open, onOpenChange, onScheduleContent }: LeadDrawerProps) {
   const router = useRouter();
   if (!lead) return null;
   const stage = PIPELINE_STAGES.find((s) => s.id === lead.stage)!;
@@ -125,6 +128,8 @@ export function LeadDrawer({ lead, open, onOpenChange }: LeadDrawerProps) {
               <p className="text-sm text-[var(--text-tertiary)]">No meetings yet.</p>
             )}
           </div>
+
+          <LeadMarketingSection lead={lead} onScheduleContent={onScheduleContent} />
 
           <div className="rounded-[var(--radius-lg)] bg-[var(--bg-brand-subtle)] p-3.5">
             <div className="flex items-center gap-1.5 mb-1.5">

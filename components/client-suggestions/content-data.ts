@@ -371,6 +371,10 @@ export interface ContentItemBase {
       plus the review interval. */
   reviewBy?: string;
   engagement: ContentEngagement;
+  /** The playable file for a video, or the image for a post. Not attached in the prototype data. */
+  mediaUrl?: string;
+  /** Still frame shown before a video plays. */
+  posterUrl?: string;
 }
 
 export interface LearningContent extends ContentItemBase {
@@ -1254,7 +1258,20 @@ export type AuditAction =
   | "send-dismissed"
   | "flag-overridden"
   | "approval-removed"
-  | "client-engaged";
+  | "client-engaged"
+  | "loop-scheduled"
+  | "loop-paused"
+  | "loop-resumed"
+  | "lead-paused"
+  | "lead-resumed"
+  | "lead-skipped"
+  | "lead-sent-now"
+  | "lead-removed"
+  | "lead-moved"
+  | "lead-added"
+  | "note-generated"
+  | "note-edited"
+  | "note-approved";
 
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   created: "Created",
@@ -1270,6 +1287,19 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   "flag-overridden": "Flag Overridden",
   "approval-removed": "Approval Removed",
   "client-engaged": "Client Engaged",
+  "loop-scheduled": "Loop Scheduled",
+  "loop-paused": "Loop Paused",
+  "loop-resumed": "Loop Resumed",
+  "lead-paused": "Lead Paused",
+  "lead-resumed": "Lead Resumed",
+  "lead-skipped": "Message Skipped",
+  "lead-sent-now": "Sent Now",
+  "lead-removed": "Lead Removed",
+  "lead-moved": "Lead Moved",
+  "lead-added": "Lead Added",
+  "note-generated": "Note Drafted",
+  "note-edited": "Note Edited",
+  "note-approved": "Note Approved",
 };
 
 export interface AuditEntry {

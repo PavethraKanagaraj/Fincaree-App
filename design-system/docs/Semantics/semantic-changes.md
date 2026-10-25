@@ -13,7 +13,7 @@ Figma: `7.Components` variable `Tabs/Trigger/Background/Hover` repointed to `Ove
 draws a 2px neutral underline (`Border/Interactive/Hover`, token `--tabs-indicator-hover`) in the same
 spot as the green active indicator; the active tab shows only its green line. New variable
 `Tabs/Line/Indicator/Hover` in `7.Components` (and `figma/components.json`).
-**Not yet updated in Figma:** the Tabs component's Line / Hover variant doesn't draw the underline yet.
+**Figma:** `Tabs/Trigger`, `Style=Line, State=Hover` now has a 2px bottom stroke bound to `Tabs/Line/Indicator/Hover` (same construction as Line / Active).
 
 ---
 

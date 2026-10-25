@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* ============================================================
    FINCAREE DESIGN SYSTEM — CSS CUSTOM PROPERTIES
@@ -4315,4 +4316,22 @@
 @theme {
   --breakpoint-2xl: 1440px;
   --breakpoint-3xl: 1600px;
+}
+
+/* ── Border Beam ─────────────────────────────────────────── */
+@property --border-beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@theme inline {
+  --animate-border-beam: border-beam var(--border-beam-duration, 5s)
+    var(--border-beam-delay, 0s) infinite linear;
+}
+
+@keyframes border-beam {
+  to {
+    --border-beam-angle: 360deg;
+  }
 }

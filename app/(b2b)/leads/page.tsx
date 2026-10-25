@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PageFrame, PageGrid } from "@/components/layout/PageFrame";
 import { Input } from "@/components/fincaree/input";
 import { SelectField, SelectItem } from "@/components/fincaree/select";
-import { Search, UserPlus } from "lucide-react";
+import { CalendarClock, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/fincaree/button";
 
 import { AiConversionBrief } from "@/components/leads/AiConversionBrief";
@@ -15,6 +15,10 @@ import { PipelineBoard } from "@/components/leads/PipelineBoard";
 import { LeadDrawer } from "@/components/leads/LeadDrawer";
 import { InviteContactDialog, ContactInvite } from "@/components/leads/InviteContactDialog";
 import type { NewLeadsTab } from "@/components/leads/PipelineBoard";
+import { ScheduleLoopDialog } from "@/components/client-suggestions/ScheduleLoopDialog";
+import { MARKETING_CONTENT, marketing, useMarketing } from "@/components/client-suggestions/marketing-store";
+import { isMarketable, loopAudiences, type LoopAudience } from "@/components/client-suggestions/marketing-intelligence";
+import type { NurtureSequence } from "@/components/client-suggestions/delivery-data";
 import { StageOverviewStrip } from "@/components/leads/StageOverviewStrip";
 import { PIPELINE_LEADS, PipelineLead, LeadSource, LEAD_SOURCE_LABEL, leadGoals } from "@/components/leads/pipeline-data";
 
@@ -69,6 +73,11 @@ export default function LeadPipelinePage() {
   const [newTab, setNewTab] = useState<NewLeadsTab>("suggested");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+  /* Scheduling content for leads: the same loops and compliance-approved content as the Marketing tab. */
+  const { loops } = useMarketing();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleKey, setScheduleKey] = useState(0);
+  const [scheduleAudiences, setScheduleAudiences] = useState<LoopAudience[]>([]);
   const [allLeads, setAllLeads] = useState<PipelineLead[]>(PIPELINE_LEADS);
   const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -133,6 +142,34 @@ export default function LeadPipelinePage() {
   function goToColumn(key: string) {
     if (key === "new") setNewTab(suggested.length > 0 ? "suggested" : "invited");
     document.getElementById(`stage-${key}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  }
+
+  /* Leads in the current view who can take marketing and aren't in a loop yet. */
+  const enrolled = new Set(loops.flatMap((s) => s.leadList.map((l) => l.name)));
+  const eligibleInView = leads.filter((l) => isMarketable(l) && !enrolled.has(l.name));
+
+  function openSchedule(audiences: LoopAudience[]) {
+    setScheduleAudiences(audiences);
+    setScheduleKey((k) => k + 1);
+    setScheduleOpen(true);
+  }
+
+  /* A group with similar patterns: whatever the board is filtered to. */
+  function scheduleForView() {
+    const goals = new Set(eligibleInView.map((l) => l.goal));
+    const view: LoopAudience = { key: "view", label: "Leads in this view", goal: goals.size === 1 ? [...goals][0] : null, leads: eligibleInView };
+    openSchedule([view, ...loopAudiences(loops)]);
+  }
+
+  function scheduleForLead(lead: PipelineLead) {
+    setDrawerOpen(false);
+    openSchedule([{ key: `lead:${lead.id}`, label: lead.name, goal: lead.goal || null, leads: [lead] }]);
+  }
+
+  function onScheduled(loop: NurtureSequence) {
+    marketing.scheduleLoop(loop);
+    setInviteNotice(`“${loop.name}” is scheduled for ${loop.leads} lead${loop.leads === 1 ? "" : "s"}. Manage it in Content Management › Marketing.`);
+    window.setTimeout(() => setInviteNotice(null), 8000);
   }
 
   function openLead(lead: PipelineLead) {
@@ -201,6 +238,16 @@ export default function LeadPipelinePage() {
               ))}
             </SelectField>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            leadingIcon={<CalendarClock size={14} strokeWidth={1.75} />}
+            disabled={eligibleInView.length === 0}
+            title={eligibleInView.length === 0 ? "No leads in this view can take follow-up messages yet" : undefined}
+            onClick={scheduleForView}
+          >
+            Schedule content{eligibleInView.length > 0 ? ` for ${eligibleInView.length} lead${eligibleInView.length === 1 ? "" : "s"}` : ""}
+          </Button>
         </div>
         <p role="status" aria-live="polite" className="text-xs text-[var(--text-secondary)] min-h-0 empty:hidden">{inviteNotice}</p>
 
@@ -209,7 +256,16 @@ export default function LeadPipelinePage() {
       </PageFrame>
 
       <InviteContactDialog open={inviteOpen} onOpenChange={setInviteOpen} onInvite={inviteContact} />
-      <LeadDrawer lead={selectedLead} open={drawerOpen} onOpenChange={setDrawerOpen} />
+      <ScheduleLoopDialog
+        key={scheduleKey}
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        items={MARKETING_CONTENT}
+        audiences={scheduleAudiences}
+        initial={null}
+        onSchedule={onScheduled}
+      />
+      <LeadDrawer lead={selectedLead} open={drawerOpen} onOpenChange={setDrawerOpen} onScheduleContent={scheduleForLead} />
     </AppShell>
   );
 }

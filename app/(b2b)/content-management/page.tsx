@@ -33,6 +33,8 @@ import { AssignContentDrawer } from "@/components/client-suggestions/AssignConte
 import { ReviewQueue, type ResolvedSend } from "@/components/client-suggestions/ReviewQueue";
 import { SendLog } from "@/components/client-suggestions/DeliveryPanels";
 import { MarketingZone } from "@/components/client-suggestions/MarketingZone";
+import { useMarketing } from "@/components/client-suggestions/marketing-store";
+import { useNoteEvents } from "@/components/meeting-desk/meeting-notes";
 import {
   REVIEW_QUEUE,
   SEND_TRIGGER_LABEL,
@@ -160,6 +162,10 @@ function daysSince(dateStr: string): number {
 export default function ContentStudioPage() {
   const [items, setItems] = useState<ContentItem[]>(() => seedContentItems(CONTENT_ITEMS));
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(AUDIT_LOG);
+  /* Marketing changes (scheduling, per-lead pauses and sends) are logged by the shared store. */
+  const { events: marketingEvents } = useMarketing();
+  /* Meeting notes drafted, reworded and approved on the Meetings page are logged the same way. */
+  const noteEvents = useNoteEvents();
 
   const [tab, setTab] = useState<TypeTab>("all");
   const [statusTab, setStatusTab] = useState<LibraryTab>("ready");
@@ -695,7 +701,7 @@ export default function ContentStudioPage() {
             />
           )}
           {view === "marketing" && <MarketingZone items={items} />}
-          {view === "log" && <SendLog entries={auditLog} />}
+          {view === "log" && <SendLog entries={[...auditLog, ...marketingEvents, ...noteEvents]} />}
 
           <div hidden={view !== "send"} className="xl:flex-1 xl:min-h-0">
             <SequenceBuilder

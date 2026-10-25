@@ -25,6 +25,9 @@ import {
   STATUS_COLORS,
   STATUS_LABELS,
 } from "./data";
+import { MeetingNote } from "./MeetingNote";
+import { TranscriptViewer } from "./TranscriptViewer";
+import { hasTranscript, useMeetingNotes } from "./meeting-notes";
 import {
   X,
   MoreHorizontal,
@@ -97,8 +100,11 @@ const ACTION_STATUS_LABEL: Record<ActionItem["status"], string> = {
 
 /* ---- Brief tab — Q1 + Q2 ---- */
 
-function BriefTab({ meeting }: { meeting: MeetingRecord }) {
+function BriefTab({ meeting, onViewNote, onOpenTranscript }: { meeting: MeetingRecord; onViewNote: () => void; onOpenTranscript: (ids: string[]) => void }) {
   const [notes, setNotes] = useState("");
+  const noteState = useMeetingNotes()[meeting.id];
+  const recorded = hasTranscript(meeting.id);
+  const noteLabel = !recorded ? null : noteState?.status === "reviewed" ? "Note reviewed" : noteState?.status === "draft" ? "Note drafted by Finny — not reviewed yet" : "Note not generated yet";
 
   return (
     <div className="space-y-5">
@@ -143,6 +149,13 @@ function BriefTab({ meeting }: { meeting: MeetingRecord }) {
           <div>
             <p className="text-sm text-[var(--text-primary)] leading-relaxed mb-1.5">{meeting.lastMeetingSummary}</p>
             <p className="text-xs text-[var(--text-tertiary)]">{meeting.lastMeetingDate}</p>
+            {recorded && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                <span className="text-[var(--text-tertiary)]">{noteLabel}</span>
+                <button type="button" onClick={onViewNote} className="font-semibold text-[var(--text-brand-primary)] hover:underline">View note</button>
+                <button type="button" onClick={() => onOpenTranscript([])} className="font-semibold text-[var(--text-brand-primary)] hover:underline">View transcript</button>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-[var(--text-tertiary)]">First meeting with this client — no previous meeting on file.</p>
@@ -347,7 +360,10 @@ function SendTab({ meeting }: { meeting: MeetingRecord }) {
    specific to looking backward: what happened, what got decided, what
    Finny noticed. ---- */
 
-function LastMeetingCard({ meeting, detail }: { meeting: MeetingRecord; detail: LastMeetingDetail }) {
+function LastMeetingCard({ meeting, detail, onOpenTranscript }: { meeting: MeetingRecord; detail: LastMeetingDetail; onOpenTranscript: (ids: string[]) => void }) {
+  const noteStatus = useMeetingNotes()[meeting.id]?.status;
+  /* Once Finny's note exists it replaces the hand-written summary and decisions. */
+  const generated = noteStatus === "draft" || noteStatus === "reviewed";
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] p-4">
       <div className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
@@ -359,7 +375,7 @@ function LastMeetingCard({ meeting, detail }: { meeting: MeetingRecord; detail: 
       </div>
 
       <div className="space-y-4">
-        {meeting.lastMeetingSummary && (
+        {!generated && meeting.lastMeetingSummary && (
           <div>
             <div className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">
               Summary
@@ -368,6 +384,7 @@ function LastMeetingCard({ meeting, detail }: { meeting: MeetingRecord; detail: 
           </div>
         )}
 
+        {!generated && (
         <div>
           <div className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">
             Decisions
@@ -381,6 +398,9 @@ function LastMeetingCard({ meeting, detail }: { meeting: MeetingRecord; detail: 
             ))}
           </ul>
         </div>
+        )}
+
+        <MeetingNote meetingId={meeting.id} label={`${detail.title} · ${meeting.client.name}`} onOpenTranscript={onOpenTranscript} />
 
         <div>
           <div className="flex items-center gap-1.5 mb-1.5">
@@ -400,14 +420,6 @@ function LastMeetingCard({ meeting, detail }: { meeting: MeetingRecord; detail: 
         </div>
       </div>
 
-      <Button
-        variant="secondary"
-        size="sm"
-        trailingIcon={<ExternalLink size={12} strokeWidth={1.75} />}
-        className="w-full justify-center mt-4"
-      >
-        View Transcript
-      </Button>
     </div>
   );
 }
@@ -521,7 +533,7 @@ function QuickAccessSection() {
 
 /* ---- History tab — Feature 5 + Feature 9 (audit) ---- */
 
-function HistoryTab({ meeting }: { meeting: MeetingRecord }) {
+function HistoryTab({ meeting, onOpenTranscript }: { meeting: MeetingRecord; onOpenTranscript: (ids: string[]) => void }) {
   return (
     <div className="space-y-5">
       <div>
@@ -530,7 +542,7 @@ function HistoryTab({ meeting }: { meeting: MeetingRecord }) {
           <span className="text-sm font-semibold text-[var(--text-primary)]">Interaction History</span>
         </div>
         {meeting.lastMeetingDetail ? (
-          <LastMeetingCard meeting={meeting} detail={meeting.lastMeetingDetail} />
+          <LastMeetingCard meeting={meeting} detail={meeting.lastMeetingDetail} onOpenTranscript={onOpenTranscript} />
         ) : meeting.lastMeetingSummary ? (
           <div className="relative">
             <div className="absolute left-[11px] top-2 bottom-2 w-px bg-[var(--border-tertiary)]" />
@@ -573,9 +585,14 @@ interface MeetingDeskDrawerProps {
 
 export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) {
   const [displayMeeting, setDisplayMeeting] = useState<MeetingRecord | null>(null);
+  const [tab, setTab] = useState("brief");
+  /* The transcript opens over the drawer; `highlight` is the passage a note point came from. */
+  const [transcript, setTranscript] = useState<{ open: boolean; highlight: string[] }>({ open: false, highlight: [] });
   if (meeting && meeting !== displayMeeting) {
     setDisplayMeeting(meeting);
+    setTab("brief");
   }
+  const openTranscript = (highlight: string[]) => setTranscript({ open: true, highlight });
 
   const shown = displayMeeting;
   if (!shown) return null;
@@ -656,7 +673,7 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="brief" variant="line" className="flex flex-col flex-1 min-h-0">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as string)} variant="line" className="flex flex-col flex-1 min-h-0">
           <div className="px-5 pt-5 shrink-0 border-b border-[var(--border-tertiary)]">
             <TabsList>
               <TabsTrigger value="brief">Brief</TabsTrigger>
@@ -668,7 +685,7 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
           </div>
 
           <TabsPanel value="brief" className="flex-1 overflow-y-auto px-5 py-5">
-            <BriefTab meeting={shown} />
+            <BriefTab meeting={shown} onViewNote={() => setTab("history")} onOpenTranscript={openTranscript} />
           </TabsPanel>
           <TabsPanel value="actions" className="flex-1 overflow-y-auto px-5 py-5">
             <ActionsTab meeting={shown} />
@@ -677,7 +694,7 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
             <SendTab meeting={shown} />
           </TabsPanel>
           <TabsPanel value="history" className="flex-1 overflow-y-auto px-5 py-5">
-            <HistoryTab meeting={shown} />
+            <HistoryTab meeting={shown} onOpenTranscript={openTranscript} />
           </TabsPanel>
         </Tabs>
 
@@ -691,6 +708,16 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
           </div>
         </div>
       </SheetContent>
+
+      {hasTranscript(shown.id) && (
+        <TranscriptViewer
+          meetingId={shown.id}
+          title={`${shown.client.name} · ${shown.lastMeetingDetail?.title ?? "Last meeting"}`}
+          open={transcript.open}
+          onOpenChange={(open) => setTranscript((t) => ({ ...t, open }))}
+          highlight={transcript.highlight}
+        />
+      )}
     </Sheet>
   );
 }

@@ -121,7 +121,7 @@ export function SelectField({
 
       {/* Popup */}
       <Select.Portal>
-        <Select.Positioner sideOffset={4} align="start" alignItemWithTrigger={false}>
+        <Select.Positioner sideOffset={4} align="start" alignItemWithTrigger={false} className="z-[60]">
           <Select.Popup className="fc-select-popup" data-size={size}>
             <Select.List>{children}</Select.List>
           </Select.Popup>
