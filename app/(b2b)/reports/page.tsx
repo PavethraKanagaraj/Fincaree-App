@@ -140,7 +140,7 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <PageFrame width="default" title="Report Queue" description="AI-assisted reports that require review, validation or approval." actions={
+      <PageFrame width="full" title="Report Queue" description="AI-assisted reports that require review, validation or approval." actions={
         <>
           <Button variant="secondary" size="sm" leadingIcon={<Download size={14} strokeWidth={1.75} />}>
             Export

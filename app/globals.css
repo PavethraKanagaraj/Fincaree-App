@@ -875,7 +875,7 @@
     --select-halo:            var(--focus-ring-halo-primary);
 
     /* ── Board scroller (kanban columns on Leads / Meetings / Reports) ── */
-    --page-margin:            16px;  /* PageFrame side margin; grows at md and 2xl below */
+    --page-margin:            16px;  /* PageFrame side margin; 16px to 1439, 24px from 1440 */
     --board-gutter:           var(--page-margin);  /* a board bleeds out of the page margin and restores it */
     --board-gap:              16px;
     --board-pb:               12px;
@@ -4307,8 +4307,8 @@
 
 /* ── Page margin ─────────────────────────────────────────── */
 /* 12-col grid, 16px gutter. Margin: 16 (<768), 24 (768+), 32 (1440+). */
-@media (min-width: 768px)  { :root { --page-margin: 24px; } }
-@media (min-width: 1440px) { :root { --page-margin: 32px; } }
+@media (min-width: 768px)  { :root { --page-margin: 16px; } }
+@media (min-width: 1440px) { :root { --page-margin: 24px; } }
 
 /* ── Breakpoints ─────────────────────────────────────────── */
 /* Match Figma "4.Screen widths": 2XL is 1440, 3XL is 1600. Tailwind's

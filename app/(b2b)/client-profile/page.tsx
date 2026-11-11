@@ -33,7 +33,7 @@ export default function ClientProfilePage() {
 
   return (
     <AppShell>
-      <PageContainer width="default">
+      <PageContainer width="full">
         <ClientHeader client={clientData} />
 
         {/* Design-system Tabs: trigger padding, the sliding indicator, arrow-key

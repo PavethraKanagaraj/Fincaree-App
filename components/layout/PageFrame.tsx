@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
    Grid: 12 columns, 16px gutter, measured inside the content area
    (after the side nav). Side margin is --page-margin in globals.css:
-   16px below 768, 24px from 768, 32px from 1440.
+   16px below 1440, 24px from 1440.
 
    Width is a choice per page, not an accident:
    - full     boards and tables; fluid, no cap

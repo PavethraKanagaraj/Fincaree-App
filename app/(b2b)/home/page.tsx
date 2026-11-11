@@ -29,7 +29,7 @@ import { HOME_TODAY_LABEL } from "@/components/home/home-data";
 export default function HomePage() {
   return (
     <AppShell>
-      <PageFrame width="default" title="Good morning, Aditya" description={HOME_TODAY_LABEL}>
+      <PageFrame width="full" title="Good morning, Aditya" description={HOME_TODAY_LABEL}>
         {/* ── Pipeline summary cards + Finny ── */}
         <PipelineSummaryCards />
 
