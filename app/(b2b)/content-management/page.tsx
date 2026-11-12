@@ -110,7 +110,7 @@ type PageView = "send" | "library" | "marketing" | "log";
 /* ─── Type tabs (Library view) — "what kind of content am I looking for?" ─── */
 type TypeTab = ContentTypeKey;
 
-/* Same types, same order as the Add content panel in Review & send. No "All" tab:
+/* Same types, same order as the Add content panel in Assign content. No "All" tab:
    the advisor always picks the kind of content first. */
 const TYPE_TAB_ORDER: ContentTypeKey[] = ["learning-path", "pdf", "video", "image-post", "message", "simulation", "workshop", "presentation"];
 
@@ -648,10 +648,12 @@ function ContentStudioPage() {
     resolveQueueItem(q, { outcome: "dismissed", detail: reason || "No reason given" });
   }
 
-  /** Loads the suggestion into the composer, pre-filled, replacing whatever was on the canvas. */
+  /** Loads the suggested client into the composer with an empty canvas, replacing whatever was on it. */
   function selectQueueItem(q: ReviewQueueItem) {
     setBuilderSeed((prev) => ({
-      ids: q.contentIds,
+      /* The canvas starts empty: the client, title and message are filled in, and the content comes
+         from Finny's suggestions or from the advisor adding it, not pre-loaded. */
+      ids: [],
       nonce: prev.nonce + 1,
       reset: true,
       title: q.meeting ? `${q.meeting.title} follow-up` : `${SEND_TRIGGER_LABEL[q.trigger]} for ${clientNameOf(q.clientId)}`,
@@ -672,11 +674,11 @@ function ContentStudioPage() {
     <AppShell>
       {/* In the Send view (desktop), the page stops scrolling and the builder
           fills the remaining height; its three columns scroll on their own. */}
-      <PageFrame width="full" title="Content Management" description="Review suggested sends, compose packages for clients and manage the content library." lockHeight={view === "send"} tabs={
+      <PageFrame width="full" title="Content Management" description="Assign content to clients and leads, and manage the content library." lockHeight={view === "send"} tabs={
         <Tabs value={view} onValueChange={(v) => setView(v as PageView)} variant="pill">
               <TabsList aria-label="Content Management view">
                 <TabsTrigger value="send" icon={<Send size={16} strokeWidth={1.75} />}>
-                  Review &amp; send
+                  Assign content
                   {pendingQueue.length > 0 && (
                     <span className="ml-1 text-xs font-semibold text-[var(--text-status-warning)] bg-[var(--bg-status-warning-subtle)] px-2 py-0.5 rounded-full tabular-nums">
                       {pendingQueue.length}
@@ -716,8 +718,6 @@ function ContentStudioPage() {
               seed={builderSeed}
               onSelect={selectQueueItem}
               onNew={newSend}
-              onApprove={approveQueueItem}
-              onDismiss={dismissQueueItem}
               onEditSimulation={editSimulation}
               onSend={sendSequence}
             />

@@ -14,34 +14,23 @@
             composer resolves the suggestion too. Nothing is sent
             without that decision, and every decision is logged.
 
-   Sourcing: Fincaree Avatar, Badge, Button, Input.
+   Sourcing: Fincaree Avatar, Badge, Button.
    ============================================================ */
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/fincaree/avatar";
-import { Badge, type BadgeColor } from "@/components/fincaree/badge";
+import { Badge } from "@/components/fincaree/badge";
 import { Button } from "@/components/fincaree/button";
-import { Input } from "@/components/fincaree/input";
-import { CheckCircle2, ChevronDown, Info, Plus, Sparkles, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Info, Plus } from "lucide-react";
 import type { Client, ContentItem } from "./content-data";
 import {
   SEND_TRIGGER_LABEL,
   SKIPPED_TRIGGERS,
-  adviceLanguage,
-  isSendableToClients,
   type ReviewQueueItem,
-  type SendTrigger,
 } from "./delivery-data";
 import type { ResolvedSend } from "./ReviewQueue";
 import { SequenceBuilder, type SequenceSendPayload } from "./SequenceBuilder";
-
-const TRIGGER_COLOR: Record<SendTrigger, BadgeColor> = {
-  "meeting-follow-up": "brand",
-  "client-query": "gray-blue",
-  "difficulty-detected": "warning",
-  "portfolio-drop": "warning",
-};
 
 interface SendWorkspaceProps {
   pending: ReviewQueueItem[];
@@ -53,8 +42,6 @@ interface SendWorkspaceProps {
   seed: React.ComponentProps<typeof SequenceBuilder>["seed"];
   onSelect: (q: ReviewQueueItem) => void;
   onNew: () => void;
-  onApprove: (q: ReviewQueueItem, message: string) => void;
-  onDismiss: (q: ReviewQueueItem, reason: string) => void;
   onEditSimulation: (item: ContentItem) => void;
   onSend: (payload: SequenceSendPayload) => void;
 }
@@ -68,13 +55,9 @@ export function SendWorkspace({
   seed,
   onSelect,
   onNew,
-  onApprove,
-  onDismiss,
   onEditSimulation,
   onSend,
 }: SendWorkspaceProps) {
-  const active = pending.find((q) => q.id === activeId) ?? null;
-
   return (
     <div className="flex flex-col gap-4 xl:grid xl:h-full xl:grid-cols-[280px_minmax(0,1fr)]">
       <QueueRail
@@ -87,22 +70,12 @@ export function SendWorkspace({
       />
 
       <div className="flex flex-col gap-3 min-w-0 min-h-0">
-        {active && (
-          <SuggestionBar
-            key={active.id}
-            q={active}
-            items={items}
-            clients={clients}
-            onApprove={onApprove}
-            onDismiss={onDismiss}
-          />
-        )}
         <div className="xl:flex-1 xl:min-h-0 xl:[&>section]:h-full">
           <SequenceBuilder
             items={items}
             clients={clients}
             seed={seed}
-            columnsClassName="xl:grid-cols-[320px_minmax(0,1fr)_300px]"
+            columnsClassName="xl:grid-cols-[352px_minmax(0,1fr)_300px]"
             onEditSimulation={onEditSimulation}
             onSend={onSend}
           />
@@ -134,16 +107,17 @@ function QueueRail({
 
   return (
     <aside
-      aria-label="Review queue"
+      aria-label="Content assign queue"
       className="flex flex-col min-h-0 max-h-[360px] xl:max-h-none overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)]"
     >
-      <div className="shrink-0 flex items-center justify-between gap-2 px-4 pt-4 pb-3">
+      <div className="shrink-0 px-4 pt-4 pb-3">
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-          Review queue
+          Content assign queue
           <span className="font-normal text-[var(--text-tertiary)]"> · {pending.length}</span>
         </h2>
-        <Button variant="secondary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={onNew}>
-          New send
+        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">Pick a client to assign content to, or start a new one.</p>
+        <Button variant="secondary" size="sm" className="mt-3 w-full" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={onNew}>
+          Assign content
         </Button>
       </div>
 
@@ -153,7 +127,7 @@ function QueueRail({
             <CheckCircle2 size={18} strokeWidth={1.75} className="text-[var(--icon-status-success)] shrink-0" />
             <div>
               <p className="text-sm font-semibold text-[var(--text-primary)]">You&apos;re all caught up</p>
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">No suggested sends are waiting for review.</p>
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">No content is waiting to be assigned.</p>
             </div>
           </div>
         ) : (
@@ -168,12 +142,15 @@ function QueueRail({
                     aria-current={selected ? "true" : undefined}
                     onClick={() => onSelect(q)}
                     className={cn(
-                      "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
+                      "relative flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--border-brand-primary)]",
                       selected ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]"
                     )}
                   >
-                    <Avatar size="sm" initials={client?.initials ?? "?"} />
+                    {/* The selected row is marked by a solid bar on its edge, and its avatar and count switch
+                        to white, so nothing grey sits on the green wash and fades into it. */}
+                    {selected && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[var(--bg-brand-primary)]" />}
+                    <Avatar size="sm" initials={client?.initials ?? "?"} className={selected ? "bg-[var(--bg-primary)] ring-1 ring-[var(--border-brand-secondary)]" : undefined} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-[var(--text-primary)] truncate">
                         {client?.name ?? "Client"}
@@ -182,7 +159,14 @@ function QueueRail({
                         {SEND_TRIGGER_LABEL[q.trigger]} · {q.raisedAt}
                       </span>
                     </span>
-                    <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--text-secondary)] bg-[var(--bg-secondary)] rounded-full px-2 py-0.5">
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+                        selected
+                          ? "bg-[var(--bg-primary)] text-[var(--text-brand-primary)] border border-[var(--border-brand-secondary)]"
+                          : "bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
+                      )}
+                    >
                       {q.contentIds.length}
                     </span>
                   </button>
@@ -238,105 +222,5 @@ function QueueRail({
         </div>
       )}
     </aside>
-  );
-}
-
-/* ════════════════════════════════════════════════
-   Suggestion bar — who, why now, and the decision
-   ════════════════════════════════════════════════ */
-function SuggestionBar({
-  q,
-  items,
-  clients,
-  onApprove,
-  onDismiss,
-}: {
-  q: ReviewQueueItem;
-  items: ContentItem[];
-  clients: Client[];
-  onApprove: (q: ReviewQueueItem, message: string) => void;
-  onDismiss: (q: ReviewQueueItem, reason: string) => void;
-}) {
-  const client = clients.find((c) => c.id === q.clientId);
-  const [dismissing, setDismissing] = useState(false);
-  const [reason, setReason] = useState("");
-
-  const content = q.contentIds.map((id) => items.find((i) => i.id === id)).filter((i): i is ContentItem => Boolean(i));
-  const sendable = content.filter(isSendableToClients);
-  const held = content.length - sendable.length;
-  const advice = adviceLanguage(q.message);
-  const blocker = advice
-    ? `The suggested message reads like a recommendation (“${advice}”). Reword it below, or issue it through the Advice flow.`
-    : sendable.length === 0
-      ? "None of the suggested content can be sent yet."
-      : null;
-  const approveLabel = held > 0 ? `Approve ${sendable.length} of ${content.length}` : "Approve as suggested";
-
-  return (
-    <section
-      aria-label={`Suggested send for ${client?.name ?? "client"}`}
-      className="shrink-0 rounded-[var(--radius-xl)] border border-[var(--border-brand-secondary)] bg-[var(--bg-primary)] px-4 py-3"
-    >
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex items-start gap-3 min-w-0">
-          <Avatar size="md" initials={client?.initials ?? "?"} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {client?.name ?? "Client"}{" "}
-                <span className="font-normal text-[var(--text-tertiary)]">· {client?.plan} plan · {q.raisedAt}</span>
-              </p>
-              <Badge size="sm" color={TRIGGER_COLOR[q.trigger]}>
-                {SEND_TRIGGER_LABEL[q.trigger]}
-              </Badge>
-              <Badge size="sm" color="gray-blue" leadingIcon={<Sparkles size={11} strokeWidth={2} />}>
-                AI-suggested
-              </Badge>
-            </div>
-            <ul className="mt-1 space-y-0.5">
-              {q.evidence.map((e) => (
-                <li key={e} className="flex items-start gap-2 text-xs text-[var(--text-secondary)]">
-                  <span aria-hidden="true" className="mt-1.5 w-1 h-1 rounded-full bg-[var(--icon-tertiary)] shrink-0" />
-                  {e}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {dismissing ? (
-          <div className="flex items-end gap-2 flex-wrap">
-            <div className="min-w-[220px]">
-              <Input
-                label="Reason for dismissing (optional)"
-                size="sm"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="For example: already discussed on a call"
-              />
-            </div>
-            <Button variant="primary" size="sm" onClick={() => onDismiss(q, reason.trim())}>
-              Confirm dismiss
-            </Button>
-            <Button variant="tertiary" size="sm" onClick={() => setDismissing(false)}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="tertiary" size="sm" leadingIcon={<X size={14} strokeWidth={2} />} onClick={() => setDismissing(true)}>
-              Dismiss
-            </Button>
-            <Button variant="primary" size="sm" disabled={Boolean(blocker)} onClick={() => onApprove(q, q.message)}>
-              {approveLabel}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <p className="text-xs text-[var(--text-tertiary)] mt-2">
-        {blocker ?? "Approve as suggested, or change the content and message below and send from the composer. Either way the send is logged."}
-      </p>
-    </section>
   );
 }

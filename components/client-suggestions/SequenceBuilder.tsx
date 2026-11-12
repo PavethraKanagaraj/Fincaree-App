@@ -643,10 +643,11 @@ export function SequenceBuilder({
                   key={t.id}
                   value={t.id}
                   icon={t.icon}
-                  className="w-full justify-start !px-2.5"
+                  className="w-full min-w-0 justify-start overflow-hidden !px-2.5"
                 >
-                  {t.label}
-                  <span className="ml-auto pl-2 text-xs font-semibold tabular-nums text-[var(--text-tertiary)]">
+                  {/* The label gives way (with an ellipsis) before the count can spill out of the tab. */}
+                  <span className="min-w-0 truncate">{t.label}</span>
+                  <span className="ml-auto shrink-0 pl-2 text-xs font-semibold tabular-nums text-[var(--text-tertiary)]">
                     {tabCount(t.id)}
                   </span>
                 </TabsTrigger>
@@ -1589,6 +1590,9 @@ function PickerRow({
         className={cn(
           "shrink-0 w-7 h-7 rounded-[var(--radius-md)] flex items-center justify-center",
           tile,
+          /* On the grey "added" row the soft tile colour would blend into the background, so the tile
+             turns white with an outline and keeps its icon colour. */
+          added && "!bg-[var(--bg-primary)] border border-[var(--border-tertiary)]",
         )}
         aria-hidden="true"
       >
