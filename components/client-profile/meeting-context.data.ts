@@ -188,10 +188,10 @@ export const MEETING_CONTEXT: Record<"discovery" | "blueprint" | "proposal", Mee
       basedOn: ["Inquiry form", "Referral notes"],
     },
     discussionPriorities: [
-      { number: "01", label: "Why now / motivation", action: "Ask" },
-      { number: "02", label: "Goals & expectations", action: "Understand" },
-      { number: "03", label: "Financial context (basic)", action: "Capture" },
-      { number: "04", label: "FinCAREe services", action: "Explain" },
+      { number: "1", label: "Why now / motivation", action: "Ask" },
+      { number: "2", label: "Goals & expectations", action: "Understand" },
+      { number: "3", label: "Financial context (basic)", action: "Capture" },
+      { number: "4", label: "FinCAREe services", action: "Explain" },
     ],
     openQuestions: [
       { id: "oq-1", question: "What prompted you to look for financial advice now?", action: "Ask client" },
@@ -262,10 +262,10 @@ export const MEETING_CONTEXT: Record<"discovery" | "blueprint" | "proposal", Mee
       basedOn: ["Discovery intake", "Financial snapshot calculation"],
     },
     discussionPriorities: [
-      { number: "01", label: "Financial health score", action: "Review" },
-      { number: "02", label: "Key strengths", action: "Acknowledge" },
-      { number: "03", label: "Planning gaps", action: "Explain" },
-      { number: "04", label: "Suitable advisory plan", action: "Recommend" },
+      { number: "1", label: "Financial health score", action: "Review" },
+      { number: "2", label: "Key strengths", action: "Acknowledge" },
+      { number: "3", label: "Planning gaps", action: "Explain" },
+      { number: "4", label: "Suitable advisory plan", action: "Recommend" },
     ],
     openQuestions: [
       { id: "oq-1", question: "Any income sources not yet captured?", action: "Ask client" },
@@ -342,10 +342,10 @@ export const MEETING_CONTEXT: Record<"discovery" | "blueprint" | "proposal", Mee
       basedOn: ["Snapshot discussion", "Identified planning needs"],
     },
     discussionPriorities: [
-      { number: "01", label: "Planning needs recap", action: "Recap" },
-      { number: "02", label: "Recommended plan", action: "Present" },
-      { number: "03", label: "Scope & pricing", action: "Explain" },
-      { number: "04", label: "Questions", action: "Address" },
+      { number: "1", label: "Planning needs recap", action: "Recap" },
+      { number: "2", label: "Recommended plan", action: "Present" },
+      { number: "3", label: "Scope & pricing", action: "Explain" },
+      { number: "4", label: "Questions", action: "Address" },
     ],
     openQuestions: [
       { id: "oq-1", question: "Comfortable with an annual commitment?", action: "Ask client" },
@@ -446,10 +446,10 @@ export const SUBSCRIPTION_MEETING_CONTEXT: Record<SubscriptionTier, MeetingConte
       basedOn: ["Financial Blueprint", "Client inputs"],
     },
     discussionPriorities: [
-      { number: "01", label: "Review blueprint findings", action: "Review" },
-      { number: "02", label: "Explain priority gaps", action: "Explain" },
-      { number: "03", label: "Clarify recommendations", action: "Clarify" },
-      { number: "04", label: "Agree immediate next steps", action: "Agree" },
+      { number: "1", label: "Review blueprint findings", action: "Review" },
+      { number: "2", label: "Explain priority gaps", action: "Explain" },
+      { number: "3", label: "Clarify recommendations", action: "Clarify" },
+      { number: "4", label: "Agree immediate next steps", action: "Agree" },
     ],
     openQuestions: [
       { id: "oq-1", question: "Which recommendation needs clarification?", action: "Clarify" },
@@ -547,11 +547,11 @@ export const SUBSCRIPTION_MEETING_CONTEXT: Record<SubscriptionTier, MeetingConte
       basedOn: ["Previous review", "Current goals", "Recent financial data", "Client activity"],
     },
     discussionPriorities: [
-      { number: "01", label: "Review goal progress", action: "Review" },
-      { number: "02", label: "Discuss changes in financial situation", action: "Discuss" },
-      { number: "03", label: "Validate planning assumptions", action: "Validate" },
-      { number: "04", label: "Review outstanding actions", action: "Review" },
-      { number: "05", label: "Agree next-period actions", action: "Agree" },
+      { number: "1", label: "Review goal progress", action: "Review" },
+      { number: "2", label: "Discuss changes in financial situation", action: "Discuss" },
+      { number: "3", label: "Validate planning assumptions", action: "Validate" },
+      { number: "4", label: "Review outstanding actions", action: "Review" },
+      { number: "5", label: "Agree next-period actions", action: "Agree" },
     ],
     openQuestions: [
       { id: "oq-1", question: "Has the retirement target changed?", action: "Ask client" },
@@ -645,11 +645,11 @@ export const SUBSCRIPTION_MEETING_CONTEXT: Record<SubscriptionTier, MeetingConte
       basedOn: ["Client context", "Goals", "Financial information", "Previous meetings"],
     },
     discussionPriorities: [
-      { number: "01", label: "Review family financial priorities", action: "Review" },
-      { number: "02", label: "Review major goal changes", action: "Review" },
-      { number: "03", label: "Discuss protection / planning considerations", action: "Discuss" },
-      { number: "04", label: "Review wealth-related opportunities", action: "Review" },
-      { number: "05", label: "Agree strategic next steps", action: "Agree" },
+      { number: "1", label: "Review family financial priorities", action: "Review" },
+      { number: "2", label: "Review major goal changes", action: "Review" },
+      { number: "3", label: "Discuss protection / planning considerations", action: "Discuss" },
+      { number: "4", label: "Review wealth-related opportunities", action: "Review" },
+      { number: "5", label: "Agree strategic next steps", action: "Agree" },
     ],
     openQuestions: [
       { id: "oq-1", question: "Has the family's financial structure changed?", action: "Ask client" },

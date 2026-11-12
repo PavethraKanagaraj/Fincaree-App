@@ -16,7 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/fincaree/dropdown-menu";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Modal, ModalContent, ModalTitle } from "@/components/ui/modal";
 import {
   MeetingRecord,
   ActionItem,
@@ -43,6 +43,9 @@ import {
   FileText,
   BookOpen,
   Presentation,
+  Calendar,
+  Phone,
+  Users,
   FlaskConical,
   History,
   ArrowRight,
@@ -129,7 +132,7 @@ function BriefTab({ meeting, onViewNote, onOpenTranscript }: { meeting: MeetingR
           {meeting.briefPoints.map((point, i) => (
             <li key={point} className="flex items-start gap-2.5 text-sm text-[var(--text-primary)]">
               <span className="text-xs font-semibold text-[var(--text-tertiary)] tabular-nums shrink-0 mt-0.5">
-                {String(i + 1).padStart(2, "0")}
+                {i + 1}
               </span>
               <span className="leading-snug">{point}</span>
             </li>
@@ -608,33 +611,43 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
   const footer = footerAction();
 
   return (
-    <Sheet open={!!meeting} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent showCloseButton={false} aria-label={`${shown.meetingType} — ${shown.client.name}`}>
-        <SheetTitle className="sr-only">{shown.meetingType} — {shown.client.name}</SheetTitle>
+    <>
+    <Modal open={!!meeting} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <ModalContent showClose={false} aria-label={`${shown.meetingType} — ${shown.client.name}`} className="max-w-[760px] h-[min(760px,calc(100vh-4rem))]">
+        <ModalTitle className="sr-only">{shown.meetingType} — {shown.client.name}</ModalTitle>
 
-        {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-[var(--border-tertiary)] shrink-0">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-3">
-              <Avatar size="md" initials={initials(shown.client.name)} />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">{shown.client.name}</span>
-                  <Button
-                    variant="link-brand"
-                    size="sm"
-                    trailingIcon={<ExternalLink size={11} strokeWidth={2} />}
-                    className="text-xs"
-                  >
-                    View Client Profile
-                  </Button>
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Badge color={planColor(shown.client.plan)} size="sm">{shown.client.plan}</Badge>
-                  <span className="text-xs text-[var(--text-tertiary)]">{shown.client.id}</span>
-                </div>
+        {/* Header: the meeting leads, the client sits on its own row beneath it. */}
+        <header className="shrink-0 border-b border-[var(--border-tertiary)] px-5 pt-6 pb-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-xl font-semibold text-[var(--text-primary)] leading-tight">{shown.meetingType}</h2>
+                <Badge color={STATUS_COLORS[shown.status] ?? "gray"} leadingIcon="dot" size="sm">
+                  {STATUS_LABELS[shown.status] ?? shown.status}
+                </Badge>
+              </div>
+              <div className="mt-2.5 flex items-center gap-x-5 gap-y-1.5 flex-wrap text-sm text-[var(--text-secondary)]">
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar size={14} strokeWidth={1.75} className="text-[var(--icon-tertiary)] shrink-0" />
+                  {shown.dateLabel}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock size={14} strokeWidth={1.75} className="text-[var(--icon-tertiary)] shrink-0" />
+                  {shown.duration}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  {shown.mode === "Video" ? (
+                    <Video size={14} strokeWidth={1.75} className="text-[var(--icon-tertiary)] shrink-0" />
+                  ) : shown.mode === "Phone" ? (
+                    <Phone size={14} strokeWidth={1.75} className="text-[var(--icon-tertiary)] shrink-0" />
+                  ) : (
+                    <Users size={14} strokeWidth={1.75} className="text-[var(--icon-tertiary)] shrink-0" />
+                  )}
+                  {shown.mode}
+                </span>
               </div>
             </div>
+
             <div className="flex items-center gap-1 shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -647,30 +660,37 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
                   <DropdownMenuItem icon={<Ban size={14} strokeWidth={1.75} />}>Cancel meeting</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="tertiary" size="sm" iconOnly leadingIcon={<X size={15} strokeWidth={2} />} onClick={onClose} aria-label="Close drawer" />
+              <Button variant="tertiary" size="sm" iconOnly leadingIcon={<X size={15} strokeWidth={2} />} onClick={onClose} aria-label="Close" />
             </div>
           </div>
 
-          <div className="mb-3">
-            <div className="text-base font-semibold text-[var(--text-primary)] leading-snug mb-1">{shown.meetingType}</div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge color={STATUS_COLORS[shown.status] ?? "gray"} leadingIcon="dot" size="sm">
-                {STATUS_LABELS[shown.status] ?? shown.status}
-              </Badge>
-              <span className="text-xs text-[var(--text-tertiary)]">{shown.dateLabel} · {shown.duration} · {shown.mode}</span>
+          {/* Client */}
+          <div className="mt-5 flex items-center justify-between gap-4 rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar size="md" initials={initials(shown.client.name)} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{shown.client.name}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <Badge color={planColor(shown.client.plan)} size="sm">{shown.client.plan}</Badge>
+                  <span className="text-xs text-[var(--text-tertiary)]">{shown.client.id}</span>
+                </div>
+              </div>
             </div>
+            <Button variant="link-brand" size="sm" trailingIcon={<ExternalLink size={12} strokeWidth={2} />} className="shrink-0 text-xs">
+              View client profile
+            </Button>
           </div>
 
           {shown.urgency === "urgent" && (
-            <div className="mt-3 -mx-5 px-5 py-2.5 flex items-start gap-2 bg-[var(--bg-status-error-subtle)]">
-              <Clock size={13} strokeWidth={2} className="text-[var(--text-status-error)] shrink-0 mt-0.5" />
+            <div className="mt-4 flex items-start gap-2.5 rounded-[var(--radius-lg)] bg-[var(--bg-status-error-subtle)] px-4 py-3">
+              <Clock size={15} strokeWidth={2} className="text-[var(--text-status-error)] shrink-0 mt-0.5" />
               <div>
-                <div className="text-xs font-semibold text-[var(--text-status-error-strong)]">Meeting is today or tomorrow</div>
-                <div className="text-xs text-[var(--text-status-error)]">{shown.nextBestAction}</div>
+                <p className="text-sm font-semibold text-[var(--text-status-error-strong)]">Meeting is today or tomorrow</p>
+                <p className="text-sm text-[var(--text-status-error)] mt-0.5">{shown.nextBestAction}</p>
               </div>
             </div>
           )}
-        </div>
+        </header>
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as string)} variant="line" className="flex flex-col flex-1 min-h-0">
@@ -707,7 +727,8 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
             <Button variant="secondary" size="md">Reschedule</Button>
           </div>
         </div>
-      </SheetContent>
+      </ModalContent>
+    </Modal>
 
       {hasTranscript(shown.id) && (
         <TranscriptViewer
@@ -718,6 +739,6 @@ export function MeetingDeskDrawer({ meeting, onClose }: MeetingDeskDrawerProps) 
           highlight={transcript.highlight}
         />
       )}
-    </Sheet>
+    </>
   );
 }

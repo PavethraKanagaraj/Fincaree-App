@@ -179,7 +179,11 @@ interface SequenceBuilderProps {
     note?: string;
     clientId?: string;
     meeting?: MeetingRef;
+    /** Start from a blank canvas instead of adding to what is already there. */
+    reset?: boolean;
   };
+  /** Overrides the three-column grid at xl, for when something sits beside the builder. */
+  columnsClassName?: string;
   onEditSimulation: (item: ContentItem) => void;
   onSend: (payload: SequenceSendPayload) => void;
 }
@@ -196,6 +200,7 @@ export function SequenceBuilder({
   items,
   clients,
   seed,
+  columnsClassName,
   onEditSimulation,
   onSend,
 }: SequenceBuilderProps) {
@@ -242,15 +247,24 @@ export function SequenceBuilder({
   const [seenNonce, setSeenNonce] = useState(seed?.nonce ?? 0);
   if (seed && seed.nonce !== seenNonce) {
     setSeenNonce(seed.nonce);
+    const base = seed.reset ? [] : steps;
+    if (seed.reset) {
+      setSteps([]);
+      setTitle("");
+      setNote("");
+      setDescription("");
+      setClientId(null);
+      setGroupIds(new Set());
+    }
     const have = new Set(
-      steps.flatMap((s) => (s.kind === "content" ? [s.contentId] : [])),
+      base.flatMap((s) => (s.kind === "content" ? [s.contentId] : [])),
     );
     const fresh = seed.ids.filter((id) => !have.has(id) && byId.has(id));
     const held = fresh.filter((id) => !isSendable(byId.get(id)!));
     const add = fresh
       .filter((id) => isSendable(byId.get(id)!))
       .map((id): Step => ({ uid: nextUid(), kind: "content", contentId: id }));
-    if (add.length) setSteps([...steps, ...add]);
+    if (add.length) setSteps([...base, ...add]);
     if (seed.title !== undefined) setTitle(seed.title);
     if (seed.note !== undefined) setNote(seed.note);
     if (seed.clientId) {
@@ -582,7 +596,10 @@ export function SequenceBuilder({
   return (
     <section
       aria-label="Learning path builder"
-      className="flex flex-col xl:grid xl:h-full xl:grid-cols-[380px_minmax(0,1fr)_340px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)]"
+      className={cn(
+        "flex flex-col xl:grid xl:h-full overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)]",
+        columnsClassName ?? "xl:grid-cols-[380px_minmax(0,1fr)_340px]",
+      )}
     >
       <p aria-live="polite" className="sr-only">
         {announcement}

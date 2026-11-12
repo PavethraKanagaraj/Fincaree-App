@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 
    Header band (title, description, optional tabs, page actions) and
    content share the same width, so their edges line up at any size.
-   Sections are spaced 24px apart (space-y-6).
+   Sections are spaced 24px apart (space-y-6). Title band has 28px above
+   and 24px below; content starts 32px under the band.
    `lockHeight` stops the page scrolling at xl so a child can fill the
    remaining height and scroll on its own (Compose & send).
    ============================================================ */
@@ -44,7 +45,7 @@ interface PageContainerProps {
 
 /** Margins, width and rhythm only — for pages that draw their own header. */
 export function PageContainer({ width = "default", className, children }: PageContainerProps) {
-  return <div className={cn(MARGIN, "py-6", WIDTH[width], className)}>{children}</div>;
+  return <div className={cn(MARGIN, "pt-8 pb-6", WIDTH[width], className)}>{children}</div>;
 }
 
 interface PageFrameProps {
@@ -65,7 +66,7 @@ export function PageFrame({ title, description, actions, tabs, width = "default"
   return (
     <div className={cn("flex flex-col h-full overflow-y-auto bg-[var(--bg-canvas)]", lockHeight && "xl:overflow-hidden")}>
       <header className="shrink-0 bg-[var(--bg-primary)] border-b border-[var(--border-tertiary)]">
-        <div className={cn("flex items-start justify-between gap-4 py-5", MARGIN, WIDTH[width])}>
+        <div className={cn("flex items-start justify-between gap-4 pt-7 pb-6", MARGIN, WIDTH[width])}>
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">{title}</h1>
             {description && <p className="text-sm text-[var(--text-tertiary)] mt-0.5">{description}</p>}
@@ -79,7 +80,7 @@ export function PageFrame({ title, description, actions, tabs, width = "default"
         className={cn(
           "w-full space-y-6",
           MARGIN,
-          "py-6",
+          "pt-8 pb-6",
           WIDTH[width],
           lockHeight && "xl:flex xl:flex-col xl:flex-1 xl:min-h-0",
           contentClassName

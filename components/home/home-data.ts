@@ -9,9 +9,11 @@
 import { REPORTS, matchesSavedView, sortReportsByUrgency, workPlanReports } from "@/components/report-queue/data";
 import { MEETINGS, MEETING_ATTENTION_STATS } from "@/components/meeting-desk/data";
 import { PIPELINE_LEADS } from "@/components/leads/pipeline-data";
-import { CONTENT_ITEMS, type WorkshopContent } from "@/components/client-suggestions/content-data";
+import { CLIENTS, CONTENT_ITEMS, TOPIC_LABEL, type Client, type Topic, type WorkshopContent } from "@/components/client-suggestions/content-data";
 import type { AIInsight } from "@/components/finny/ai-pattern";
 import type { PlanTier } from "@/components/report-queue/data";
+import { REVIEW_QUEUE, needsCheckCount, seedContentItems } from "@/components/client-suggestions/delivery-data";
+import { estimateMinutes, planReason } from "@/components/report-queue/data";
 
 /** The prototype's fixed "today" (matches MOCK_TODAY / MEETINGS_TODAY). */
 export const HOME_TODAY_LABEL = "Monday, 19 May 2025";
@@ -201,6 +203,12 @@ export const CLIENT_QUERIES: ClientQuery[] = [
     status: "answered",
     reply: "Yes — the compliance-cleared reassessment confirms it's unchanged.",
   },
+  { id: "q8", clientName: "Kavitha Reddy", initials: "KR", date: "17 May", question: "Should I move my fixed deposit maturity into the retirement plan?", status: "pending" },
+  { id: "q9", clientName: "Suresh Kumar", initials: "SK", date: "18 May", question: "Does the insurance review change my retirement date estimate?", status: "pending" },
+  { id: "q10", clientName: "Deepak Mehta", initials: "DM", date: "15 May", question: "Can I split my yearly tax-saving amount across two funds?", status: "pending" },
+  { id: "q11", clientName: "Priya Sharma", initials: "PS", date: "18 May", question: "When will my next review meeting be confirmed?", status: "pending" },
+  { id: "q12", clientName: "Nikhil Bose", initials: "NB", date: "14 May", question: "How long does my query support run after the first month?", status: "pending" },
+  { id: "q13", clientName: "Arjun Nair", initials: "AN", date: "17 May", question: "Which workshop is best for someone just starting to invest?", status: "pending" },
 ];
 
 /* ---- Upcoming workshops ----
@@ -213,7 +221,141 @@ export const UPCOMING_WORKSHOPS = CONTENT_ITEMS.filter(
   (item): item is WorkshopContent => item.category === "workshop" && item.publication !== "published" && item.publication !== "archived"
 );
 
-/* ---- Lead → wealth-management-opportunity funnel ----
+/* ---- Query urgency ----
+   How long a query has waited against the reply target for the client's subscription. Shared by the
+   Client Queries card and the work plan. The targets are placeholders (same day, one day, two days)
+   until real service levels are set. "Today" is the newest query, since the sample queries carry no year. */
+export const QUERY_TARGET_DAYS: Record<PlanTier, number> = { Platinum: 0, Gold: 1, Silver: 2 };
+export type QueryLevel = "overdue" | "due-today" | "on-track";
+export const queryDayNumber = (date: string) => Math.floor(new Date(`${date} 2026`).getTime() / 86_400_000);
+const QUERIES_TODAY_DAY = Math.max(...CLIENT_QUERIES.map((q) => queryDayNumber(q.date)));
+
+export function queryLevel(query: ClientQuery): QueryLevel | null {
+  const plan = planOfClient(query.clientName);
+  if (!plan) return null;
+  const waiting = QUERIES_TODAY_DAY - queryDayNumber(query.date);
+  const target = QUERY_TARGET_DAYS[plan];
+  return waiting > target ? "overdue" : waiting === target ? "due-today" : "on-track";
+}
+
+/** The subscription tier a client query came from, read from the report and client records. */
+export function planOfClient(name: string): PlanTier | null {
+  return REPORTS.find((r) => r.client.name === name)?.client.plan ?? CLIENTS.find((c) => c.name === name)?.plan ?? null;
+}
+
+/* ---- Silver clients who could move up ----
+   The advisory plan is small by design: one or two small goals, a month of query support, then
+   promotional messages with content and workshop links. A Silver client who outgrows that shows it
+   in how they use the service, so Finny reads five signals from data the app already holds:
+
+     1. Goals beyond the plan   a goal like retirement, tax, insurance, or wealth building
+     2. Steady engagement       active or highly engaged
+     3. Reading and joining     has started, finished or registered for content or a workshop
+     4. Asking questions        has a query in the Client Queries list
+     5. Past the first month    the included query support has ended, the natural moment to talk
+
+   Two or more of them, with the client not inactive, marks a client worth a wealth management
+   conversation. It is a prompt for the advisor, not a decision. */
+
+const BIGGER_GOALS = new Set<Topic>(["retirement", "wealth-creation", "child-education", "home-purchase", "insurance", "tax-planning"]);
+const ACTIVE_CONTENT_STATES = new Set(["Completed", "Started", "Attended", "Registered"]);
+const queriedNames = new Set(CLIENT_QUERIES.map((q) => q.clientName));
+
+const contentTouches = new Map<string, number>();
+for (const item of CONTENT_ITEMS) {
+  for (const c of item.engagement.clients) {
+    if (ACTIVE_CONTENT_STATES.has(c.state)) contentTouches.set(c.clientId, (contentTouches.get(c.clientId) ?? 0) + 1);
+  }
+}
+
+export interface SilverOpportunity {
+  client: Client;
+  signals: string[];
+}
+
+function upgradeSignals(c: Client): string[] {
+  const out: string[] = [];
+  const big = c.goals.find((g) => BIGGER_GOALS.has(g));
+  if (big) out.push(`Goal beyond the plan: ${TOPIC_LABEL[big].toLowerCase()}`);
+  else if (c.goals.length > 2) out.push("More goals than the plan covers");
+  if (c.engagement === "highly-engaged" || c.engagement === "active") out.push("Steadily engaged");
+  if ((contentTouches.get(c.id) ?? 0) > 0) out.push("Reading and joining sessions");
+  if (queriedNames.has(c.name)) out.push("Asking questions");
+  if (!c.advisoryContext.includes("new-client")) out.push("Past the first month");
+  return out;
+}
+
+export const SILVER_CLIENTS = CLIENTS.filter((c) => c.plan === "Silver");
+export const SILVER_ENGAGED = SILVER_CLIENTS.filter((c) => c.engagement === "highly-engaged" || c.engagement === "active");
+
+/** Strongest first. */
+export const SILVER_OPPORTUNITIES: SilverOpportunity[] = SILVER_CLIENTS.map((client) => ({ client, signals: upgradeSignals(client) }))
+  .filter((o) => o.signals.length >= 2 && o.client.engagement !== "inactive")
+  .sort((a, b) => b.signals.length - a.signals.length);
+
+/* ---- Clients by plan, and Silver plans that are ending ----
+   Silver is the advisory plan (one or two small goals, a month of query support, then promotional
+   messages); Gold and Platinum are wealth management. The tier counts are the same advisor-specified
+   numbers the client mix chart uses, so the two cannot disagree. The plan end dates and the
+   "approached" history are authored for the sample Silver clients: nothing in the app tracks a plan's
+   end date or an approach after it yet. */
+
+export const CLIENTS_BY_PLAN: Record<PlanTier, number> = { Platinum: 34, Gold: 36, Silver: 16 };
+
+export interface SilverPlanRow {
+  client: Client;
+  /** Days until the plan ends; negative once it has ended. */
+  endsInDays: number;
+  /** Days since the advisor approached them after the plan ended, if they have. */
+  approachedDaysAgo?: number;
+}
+
+const SILVER_PLAN_DATES: Record<string, { endsInDays: number; approachedDaysAgo?: number }> = {
+  C12350: { endsInDays: 21 },
+  C12354: { endsInDays: 6 },
+  C12357: { endsInDays: -12, approachedDaysAgo: 9 },
+  C12360: { endsInDays: -20, approachedDaysAgo: 14 },
+  C12362: { endsInDays: 25 },
+  C12366: { endsInDays: 4 },
+  C12368: { endsInDays: -9, approachedDaysAgo: 5 },
+  C12372: { endsInDays: -3 },
+  C12376: { endsInDays: 14 },
+  C12380: { endsInDays: 9 },
+  C12384: { endsInDays: 7 },
+  C12388: { endsInDays: -15, approachedDaysAgo: 10 },
+  C12391: { endsInDays: 28 },
+};
+
+/** Days until a Silver client's plan ends (negative once it has), or null for any other client. */
+export const silverPlanEndsInDays = (clientId: string): number | null => SILVER_PLAN_DATES[clientId]?.endsInDays ?? null;
+
+const SILVER_PLAN_ROWS: SilverPlanRow[] = SILVER_CLIENTS.flatMap((client) => {
+  const d = SILVER_PLAN_DATES[client.id];
+  return d ? [{ client, ...d }] : [];
+});
+
+/** How soon counts as "going to end". */
+export const PLAN_ENDING_WITHIN_DAYS = 10;
+/** An approach with no reply for this long counts as gone stale. */
+export const STALE_AFTER_DAYS = 7;
+
+/** Plans ending in the next few days, soonest first. */
+export const SILVER_ENDING_SOON = SILVER_PLAN_ROWS.filter((r) => r.endsInDays >= 0 && r.endsInDays <= PLAN_ENDING_WITHIN_DAYS).sort(
+  (a, b) => a.endsInDays - b.endsInDays
+);
+
+/** Plans that ended, were approached, and have not answered for a week or more. Longest silent first. */
+export const SILVER_NO_RESPONSE = SILVER_PLAN_ROWS.filter(
+  (r) => r.endsInDays < 0 && r.approachedDaysAgo !== undefined && r.approachedDaysAgo >= STALE_AFTER_DAYS
+).sort((a, b) => (b.approachedDaysAgo ?? 0) - (a.approachedDaysAgo ?? 0));
+
+/* ---- Lead → wealth management funnel ----
+   Two service tiers sit behind this: Silver clients are advisory clients, Gold and
+   Platinum clients are wealth management clients. So the funnel runs Lead → Subscribed →
+   Advisory client → Engaged → Wealth opportunity (an advisory client ready to be
+   offered wealth management) → Wealth client (moved up to Gold or Platinum). The first
+   three stages are the advisory journey, the last two the wealth management journey.
+
    For the "month" period, Lead and Client are real (PIPELINE_LEADS.length
    and the 14-client roster Reports/Meetings share); the stages between
    and after them — Subscribed, Engaged, Opportunity — don't have a
@@ -240,24 +382,24 @@ export interface FunnelStage {
 export const WEALTH_OPPORTUNITY_FUNNEL_BY_PERIOD: Record<EngagementPeriod, FunnelStage[]> = {
   week: [
     { id: "lead", label: "Leads", description: "New inquiries", count: 7, conversionCaption: null, trend: null },
-    { id: "subscribed", label: "Subscribed", description: "Started advisory", count: 4, conversionCaption: "converted to subscribed", trend: 3 },
-    { id: "client", label: "Clients", description: "Onboarded", count: 3, conversionCaption: "converted to clients", trend: 6 },
+    { id: "client", label: "Advisory clients", description: "Onboarded on Silver", count: 3, conversionCaption: "became advisory clients", trend: 6 },
     { id: "engaged", label: "Engaged", description: "Active this period", count: 2, conversionCaption: "became engaged", trend: -4 },
-    { id: "opportunity", label: "Wealth Mgmt Opportunity", description: "Ready for wealth discussion", count: 1, conversionCaption: "visiting wealth management", trend: 5 },
+    { id: "opportunity", label: "Wealth opportunity", description: "Ready for a wealth discussion", count: 1, conversionCaption: "ready for a wealth discussion", trend: 5 },
+    { id: "wealth-client", label: "Wealth clients", description: "Moved up to Gold or Platinum", count: 0, conversionCaption: "moved up to wealth management", trend: 2 },
   ],
   month: [
     { id: "lead", label: "Leads", description: "New inquiries", count: PIPELINE_LEADS.length, conversionCaption: null, trend: null },
-    { id: "subscribed", label: "Subscribed", description: "Started advisory", count: 16, conversionCaption: "converted to subscribed", trend: 8 },
-    { id: "client", label: "Clients", description: "Onboarded", count: ENGAGEMENT_TOTAL_CLIENTS, conversionCaption: "converted to clients", trend: 12 },
-    { id: "engaged", label: "Engaged", description: "Active this period", count: 9, conversionCaption: "became engaged", trend: -6 },
-    { id: "opportunity", label: "Wealth Mgmt Opportunity", description: "Ready for wealth discussion", count: 4, conversionCaption: "visiting wealth management", trend: 10 },
+    { id: "client", label: "Advisory clients", description: "Onboarded on Silver", count: SILVER_CLIENTS.length, conversionCaption: "became advisory clients", trend: 12 },
+    { id: "engaged", label: "Engaged", description: "Active this period", count: SILVER_ENGAGED.length, conversionCaption: "became engaged", trend: -6 },
+    { id: "opportunity", label: "Wealth opportunity", description: "Ready for a wealth discussion", count: SILVER_OPPORTUNITIES.length, conversionCaption: "ready for a wealth discussion", trend: 10 },
+    { id: "wealth-client", label: "Wealth clients", description: "Moved up to Gold or Platinum", count: 1, conversionCaption: "moved up to wealth management", trend: 4 },
   ],
   year: [
     { id: "lead", label: "Leads", description: "New inquiries", count: 340, conversionCaption: null, trend: null },
-    { id: "subscribed", label: "Subscribed", description: "Started advisory", count: 190, conversionCaption: "converted to subscribed", trend: 15 },
-    { id: "client", label: "Clients", description: "Onboarded", count: 165, conversionCaption: "converted to clients", trend: 18 },
+    { id: "client", label: "Advisory clients", description: "Onboarded on Silver", count: 165, conversionCaption: "became advisory clients", trend: 18 },
     { id: "engaged", label: "Engaged", description: "Active this period", count: 108, conversionCaption: "became engaged", trend: 4 },
-    { id: "opportunity", label: "Wealth Mgmt Opportunity", description: "Ready for wealth discussion", count: 46, conversionCaption: "visiting wealth management", trend: 22 },
+    { id: "opportunity", label: "Wealth opportunity", description: "Ready for a wealth discussion", count: 46, conversionCaption: "ready for a wealth discussion", trend: 22 },
+    { id: "wealth-client", label: "Wealth clients", description: "Moved up to Gold or Platinum", count: 21, conversionCaption: "moved up to wealth management", trend: 9 },
   ],
 };
 
@@ -295,7 +437,7 @@ export const HOME_KPI_CARDS: HomeKpiCard[] = [
     count: 86,
     detail: "+4 this quarter",
     cta: "View Clients",
-    href: "/client-profile",
+    href: "/clients",
     emphasis: "default",
   },
   {
@@ -344,3 +486,99 @@ export const HOME_KPI_CARDS: HomeKpiCard[] = [
     emphasis: "ai",
   },
 ];
+
+/* ---- Today's work plan ----
+   An advisor's day is more than reports, so the plan mixes every kind of work, each read from the
+   place it lives: reports to write, client queries to answer, content to send for compliance,
+   Finny's suggested sends to approve, and leads to follow up. Minutes for everything but reports are
+   placeholder estimates per item until the app tracks real effort. */
+
+export type WorkKind = "report" | "queries" | "compliance" | "send" | "leads";
+
+export interface WorkItem {
+  id: string;
+  kind: WorkKind;
+  title: string;
+  detail: string;
+  minutes: number;
+  href: string;
+  /** Urgent items go first. */
+  urgent: boolean;
+}
+
+const MINUTES_PER = { query: 4, draft: 5, send: 3, lead: 5 };
+
+function buildWorkPlan(): WorkItem[] {
+  const items: WorkItem[] = [];
+
+  const topReport = TODAYS_WORK_PLAN[0];
+  if (topReport) {
+    const more = TODAYS_WORK_PLAN.length - 1;
+    items.push({
+      id: "w-report",
+      kind: "report",
+      title: topReport.reportName,
+      detail: `${topReport.client.name} · ${planReason(topReport)}${more > 0 ? ` · +${more} more report${more === 1 ? "" : "s"}` : ""}`,
+      minutes: TODAYS_WORK_PLAN.reduce((sum, r) => sum + estimateMinutes(r), 0),
+      href: "/reports",
+      urgent: true,
+    });
+  }
+
+  const pendingQueries = CLIENT_QUERIES.filter((q) => q.status === "pending");
+  if (pendingQueries.length > 0) {
+    const overdue = pendingQueries.filter((q) => queryLevel(q) === "overdue").length;
+    items.push({
+      id: "w-queries",
+      kind: "queries",
+      title: `Reply to ${pendingQueries.length} client ${pendingQueries.length === 1 ? "query" : "queries"}`,
+      detail: overdue > 0 ? `${overdue} overdue, Platinum and Gold first` : "Platinum and Gold first",
+      minutes: pendingQueries.length * MINUTES_PER.query,
+      href: "#client-queries",
+      urgent: overdue > 0,
+    });
+  }
+
+  const drafts = needsCheckCount(seedContentItems(CONTENT_ITEMS));
+  if (drafts > 0) {
+    items.push({
+      id: "w-compliance",
+      kind: "compliance",
+      title: `Finish ${drafts} content ${drafts === 1 ? "draft" : "drafts"} and send for compliance`,
+      detail: "Drafts and items with open flags",
+      minutes: drafts * MINUTES_PER.draft,
+      href: "/content-management",
+      urgent: false,
+    });
+  }
+
+  if (REVIEW_QUEUE.length > 0) {
+    items.push({
+      id: "w-send",
+      kind: "send",
+      title: `Approve ${REVIEW_QUEUE.length} suggested ${REVIEW_QUEUE.length === 1 ? "send" : "sends"}`,
+      detail: "Finny's suggestions waiting for your decision",
+      minutes: REVIEW_QUEUE.length * MINUTES_PER.send,
+      href: "/content-management",
+      urgent: false,
+    });
+  }
+
+  const followUps = PIPELINE_LEADS.filter((l) => l.stage === "needs-followup").length;
+  if (followUps > 0) {
+    items.push({
+      id: "w-leads",
+      kind: "leads",
+      title: `Follow up with ${followUps} ${followUps === 1 ? "lead" : "leads"}`,
+      detail: "No details received within the buffer time",
+      minutes: followUps * MINUTES_PER.lead,
+      href: "/leads",
+      urgent: false,
+    });
+  }
+
+  /* Urgent first; within each group the order above stands. */
+  return [...items].sort((a, b) => Number(b.urgent) - Number(a.urgent));
+}
+
+export const HOME_WORK_PLAN: WorkItem[] = buildWorkPlan();

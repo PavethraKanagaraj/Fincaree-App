@@ -18,19 +18,23 @@
    Reports are absent by design — they live in AI Report Queue.
    ============================================================ */
 
-import { useState, useMemo, useCallback } from "react";
+import { Suspense, useState, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageFrame } from "@/components/layout/PageFrame";
 import { Button } from "@/components/fincaree/button";
 import { ListItem } from "@/components/fincaree/list-item";
 import { Input } from "@/components/fincaree/input";
-import { SelectField, SelectItem, SelectGroup, SelectGroupLabel } from "@/components/fincaree/select";
+import { Textarea } from "@/components/fincaree/textarea";
+import { SelectField, SelectItem } from "@/components/fincaree/select";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "@/components/fincaree/tabs";
-import { ContentTable, followUpCount, type LibraryTab } from "@/components/client-suggestions/ContentTable";
+
+import { ContentBoard, activeClientCount, columnOf, type ColumnId, type MoveCheck } from "@/components/client-suggestions/ContentBoard";
 import { ContentDetailDrawer, type DrawerTab } from "@/components/client-suggestions/ContentDetailDrawer";
-import { SequenceBuilder, type SequenceSendPayload } from "@/components/client-suggestions/SequenceBuilder";
+import { type SequenceSendPayload } from "@/components/client-suggestions/SequenceBuilder";
 import { AssignContentDrawer } from "@/components/client-suggestions/AssignContentDrawer";
-import { ReviewQueue, type ResolvedSend } from "@/components/client-suggestions/ReviewQueue";
+import type { ResolvedSend } from "@/components/client-suggestions/ReviewQueue";
+import { SendWorkspace } from "@/components/client-suggestions/SendWorkspace";
 import { SendLog } from "@/components/client-suggestions/DeliveryPanels";
 import { MarketingZone } from "@/components/client-suggestions/MarketingZone";
 import { useMarketing } from "@/components/client-suggestions/marketing-store";
@@ -45,7 +49,6 @@ import {
   CONTENT_TYPE_LABEL,
   assuredReturnLanguage,
   blockingOpenCount,
-  contentStatus,
   contentTypeKey,
   isSendableToClients,
   issueSeverity,
@@ -65,21 +68,12 @@ import {
   FINNY_SUGGESTIONS,
   AUDIT_LOG,
   TOPIC_LABEL,
-  CREATED_VIA_LABEL,
-  AUDIENCE_LABEL,
   DELIVERY_CHANNEL_LABEL,
-  ENGAGEMENT_BAND_LABEL,
-  ADVISORY_STAGE_LABEL,
-  engagementBand,
   defaultVariables,
   draftPersonalizedModel,
   type ContentItem,
   type Topic,
   type ComplianceStatus,
-  type CreatedVia,
-  type Audience,
-  type EngagementBand,
-  type AdvisoryStage,
   type AuditEntry,
   type ClientGoalPlan,
   type DeliveryChannel,
@@ -87,79 +81,57 @@ import {
 import { Modal, ModalContent, ModalTitle, ModalDescription } from "@/components/ui/modal";
 import { Switch } from "@/components/fincaree/switch";
 import { cn } from "@/lib/utils";
-import { Plus, Search, FlaskConical, Presentation, SlidersHorizontal, Route, Maximize2, Send, Library, Inbox, Megaphone, ScrollText } from "lucide-react";
+import { Plus, Search, FlaskConical, Upload, X as XIcon, FileUp, Presentation, Route, Send, Library, Megaphone, ScrollText } from "lucide-react";
 
 const TODAY = "18 Sep 2026";
+
+/* ─── Upload: which files each type takes ───
+   Learning paths and simulations are built in Fincaree, so they have no upload. */
+const UPLOAD_MAX_MB = 50;
+const UPLOAD_ACCEPT: Partial<Record<ContentTypeKey, { accept: string; hint: string }>> = {
+  presentation: { accept: ".ppt,.pptx,.key,.odp,.pdf", hint: "PowerPoint, Keynote or PDF" },
+  pdf: { accept: ".pdf", hint: "PDF" },
+  video: { accept: "video/*,.mp4,.mov,.webm", hint: "MP4, MOV or WebM" },
+  "image-post": { accept: "image/*,.png,.jpg,.jpeg,.webp", hint: "PNG, JPG or WebP" },
+  course: { accept: ".pdf,.ppt,.pptx,.doc,.docx,.zip", hint: "PDF, PowerPoint, Word or a zip of modules" },
+  workshop: { accept: ".pdf,.ppt,.pptx,.doc,.docx", hint: "Deck, agenda or brochure (PDF, PowerPoint or Word)" },
+  message: { accept: ".pdf,.doc,.docx,.txt", hint: "PDF, Word or text" },
+};
+const canUpload = (t: ContentTypeKey | null): t is ContentTypeKey => t !== null && t in UPLOAD_ACCEPT;
+const fileSizeLabel = (bytes: number) => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
 /* ─── Views — sending comes first ───
    Most visits are to send something to a client, so the page opens on the
    Sequence Builder. Managing the library (review, drafts, engagement) is
    periodic work and lives in its own view, with a count of what needs
    review so that time-sensitive compliance work is never out of sight. */
-type PageView = "queue" | "send" | "library" | "marketing" | "log";
+type PageView = "send" | "library" | "marketing" | "log";
 
 /* ─── Type tabs (Library view) — "what kind of content am I looking for?" ─── */
-type TypeTab = "all" | "learning" | "simulations" | "workshops";
+type TypeTab = ContentTypeKey;
 
-const TYPE_TABS: { id: TypeTab; label: string }[] = [
-  { id: "all", label: "All Content" },
-  { id: "learning", label: "Learning" },
-  { id: "simulations", label: "Simulations" },
-  { id: "workshops", label: "Workshops" },
-];
+/* Same types, same order as the Add content panel in Review & send. No "All" tab:
+   the advisor always picks the kind of content first. */
+const TYPE_TAB_ORDER: ContentTypeKey[] = ["learning-path", "pdf", "video", "image-post", "message", "simulation", "workshop", "presentation"];
 
-/* ─── Status tabs — "can I send this?" ───
-   Four statuses only: Draft, Needs fixes, Approved, Expired. The tabs group
-   them by what the advisor does next, and combine with the type filter. */
-const STATUS_TABS: { id: LibraryTab; label: string }[] = [
-  { id: "ready", label: "Ready to send" },
-  { id: "needs-check", label: "Needs check" },
-  { id: "expired", label: "Expired" },
-  { id: "all", label: "All" },
-];
-
-/* ─── Type filter — reads the same canonical list as the Create modal ─── */
-type TypeFilter = "all" | ContentTypeKey;
-
-const TYPE_FILTER_LABEL: Record<TypeFilter, string> = { all: "All types", ...CONTENT_TYPE_LABEL };
-
-/* ─── Assignment filter (§8) ─── */
-type AssignmentFilter = "all" | "not-assigned" | "assigned" | "partially-assigned";
-
-const ASSIGNMENT_LABEL: Record<AssignmentFilter, string> = {
-  all: "All assignment",
-  "not-assigned": "Not Assigned",
-  assigned: "Assigned",
-  "partially-assigned": "Partially Assigned",
+/* Courses are listed under Workshop. */
+const tabOf = (i: ContentItem): TypeTab => {
+  const k = contentTypeKey(i);
+  return k === "course" ? "workshop" : k;
 };
-
-const CREATED_WINDOW_LABEL = { all: "Any time", "7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 3 months" };
-type CreatedWindow = keyof typeof CREATED_WINDOW_LABEL;
-
-const SORT_LABELS = { latest: "Latest", "most-assigned": "Most Assigned", "most-engaged": "Most Engaged" };
-type SortKey = keyof typeof SORT_LABELS;
-
-
-function matchesTypeFilter(item: ContentItem, f: TypeFilter): boolean {
-  return f === "all" || contentTypeKey(item) === f;
-}
-
-function inStatusTab(item: ContentItem, tab: LibraryTab): boolean {
-  const status = contentStatus(item);
-  if (tab === "ready") return status === "approved";
-  if (tab === "needs-check") return status === "draft" || status === "needs-fixes";
-  if (tab === "expired") return status === "expired";
-  return true;
-}
-
-function daysSince(dateStr: string): number {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return Infinity;
-  return Math.floor((new Date("2026-09-18").getTime() - d.getTime()) / 86_400_000);
-}
+const TYPE_TABS: { id: TypeTab; label: string }[] = TYPE_TAB_ORDER.map((id) => ({ id, label: CONTENT_TYPE_LABEL[id] }));
 
 /* ════════════════════════════════════════════════ */
-export default function ContentStudioPage() {
+/* The Suspense boundary is for useSearchParams: other pages link here with ?open=<id> to land on one item. */
+export default function ContentStudioPageRoute() {
+  return (
+    <Suspense fallback={null}>
+      <ContentStudioPage />
+    </Suspense>
+  );
+}
+
+function ContentStudioPage() {
   const [items, setItems] = useState<ContentItem[]>(() => seedContentItems(CONTENT_ITEMS));
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(AUDIT_LOG);
   /* Marketing changes (scheduling, per-lead pauses and sends) are logged by the shared store. */
@@ -167,21 +139,10 @@ export default function ContentStudioPage() {
   /* Meeting notes drafted, reworded and approved on the Meetings page are logged the same way. */
   const noteEvents = useNoteEvents();
 
-  const [tab, setTab] = useState<TypeTab>("all");
-  const [statusTab, setStatusTab] = useState<LibraryTab>("ready");
+  const [tab, setTab] = useState<TypeTab>("video");
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [topicFilter, setTopicFilter] = useState<Topic | "all">("all");
-  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
-  const [sort, setSort] = useState<SortKey>("latest");
 
-  /* Advanced — hidden by default (§9) */
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [createdWindow, setCreatedWindow] = useState<CreatedWindow>("all");
-  const [createdVia, setCreatedVia] = useState<CreatedVia | "all">("all");
-  const [engBand, setEngBand] = useState<EngagementBand | "all">("all");
-  const [stageFilter, setStageFilter] = useState<AdvisoryStage | "all">("all");
-  const [audienceFilter, setAudienceFilter] = useState<Audience | "all">("all");
 
   const [selected, setSelected] = useState<ContentItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -191,6 +152,14 @@ export default function ContentStudioPage() {
   const [createType, setCreateType] = useState<ContentTypeKey | null>(null);
   const [createIntent, setCreateIntent] = useState<ContentIntent>("learn");
   const [createAi, setCreateAi] = useState(false);
+  const [createMode, setCreateMode] = useState<"create" | "upload">("create");
+  const [createFile, setCreateFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  /* Opened from a type tab: the type is already known, so the popup only asks who it is for and takes the file. */
+  const [createScoped, setCreateScoped] = useState(false);
+  /* A message is written here (or uploaded); every other type is a file or built elsewhere. */
+  const [createMessage, setCreateMessage] = useState("");
 
   /* Multi-select exists for one reason: order matters across several items,
      which is the Learning Path case. */
@@ -201,7 +170,22 @@ export default function ContentStudioPage() {
 
   /* The expanded workspace. Opens over the studio rather than navigating
      away, so the advisor keeps their filters and selection. */
-  const [view, setView] = useState<PageView>("queue");
+  const [view, setView] = useState<PageView>("send");
+  /* Arriving from another page with ?open=<id> (the dashboard's Upcoming Workshops, say):
+     show the Content view on that item's type tab and open its popup. Done during render,
+     once per id, so the page never paints the wrong view first. */
+  const openId = useSearchParams().get("open");
+  const [handledOpenId, setHandledOpenId] = useState<string | null>(null);
+  if (openId && handledOpenId !== openId) {
+    setHandledOpenId(openId);
+    const target = items.find((i) => i.id === openId);
+    if (target) {
+      setView("library");
+      setTab(tabOf(target));
+      setSelected(target);
+      setDrawerOpen(true);
+    }
+  }
   /* Sequence Builder seed — a new nonce re-applies the selection. */
   const [builderSeed, setBuilderSeed] = useState<{
     ids: string[];
@@ -210,7 +194,10 @@ export default function ContentStudioPage() {
     note?: string;
     clientId?: string;
     meeting?: MeetingRef;
+    reset?: boolean;
   }>({ ids: [], nonce: 0 });
+  /* The queue suggestion currently loaded in the composer. */
+  const [activeQueueId, setActiveQueueId] = useState<string | null>(null);
 
   /* Review queue — AI-suggested sends waiting for the advisor's decision. */
   const [pendingQueue, setPendingQueue] = useState<ReviewQueueItem[]>(REVIEW_QUEUE);
@@ -233,15 +220,11 @@ export default function ContentStudioPage() {
     return m;
   }, [auditLog, items]);
 
-  const tabCounts = useMemo(
-    () => ({
-      all: items.length,
-      learning: items.filter((i) => i.category === "learning").length,
-      simulations: items.filter((i) => i.category === "simulation").length,
-      workshops: items.filter((i) => i.category === "workshop").length,
-    }),
-    [items]
-  );
+  const tabCounts = useMemo(() => {
+    const m = Object.fromEntries(TYPE_TAB_ORDER.map((t) => [t, 0])) as Record<TypeTab, number>;
+    for (const i of items) m[tabOf(i)] += 1;
+    return m;
+  }, [items]);
 
   /* Templates are reusable; personalised ones are bound to one client. */
   const simCounts = useMemo(() => {
@@ -254,44 +237,12 @@ export default function ContentStudioPage() {
 
   const checkedCount = checkedIds.size;
 
-  const activeFilterCount =
-    (createdWindow !== "all" ? 1 : 0) + (createdVia !== "all" ? 1 : 0) + (engBand !== "all" ? 1 : 0) + (stageFilter !== "all" ? 1 : 0) + (audienceFilter !== "all" ? 1 : 0);
-
-  /* Tab counts follow the type selection, so they match what the table would show. */
-  const statusCounts = useMemo(() => {
-    const scoped = items.filter(
-      (i) =>
-        (tab === "all" || (tab === "learning" && i.category === "learning") || (tab === "simulations" && i.category === "simulation") || (tab === "workshops" && i.category === "workshop")) &&
-        matchesTypeFilter(i, typeFilter)
-    );
-    return Object.fromEntries(STATUS_TABS.map((t) => [t.id, scoped.filter((i) => inStatusTab(i, t.id)).length])) as Record<LibraryTab, number>;
-  }, [items, tab, typeFilter]);
-
   const visible = useMemo(() => {
     let list = items;
 
-    /* Type tab */
-    if (tab === "learning") list = list.filter((i) => i.category === "learning");
-    else if (tab === "simulations") list = list.filter((i) => i.category === "simulation");
-    else if (tab === "workshops") list = list.filter((i) => i.category === "workshop");
-
-    /* Type filter, then status tab — both apply, so "Videos that are Ready to send" works. */
-    list = list.filter((i) => matchesTypeFilter(i, typeFilter));
-    list = list.filter((i) => inStatusTab(i, statusTab));
+    /* Type tab; the board sorts what is left into status columns. */
+    list = list.filter((i) => tabOf(i) === tab);
     if (topicFilter !== "all") list = list.filter((i) => i.topic === topicFilter);
-    if (assignmentFilter === "not-assigned") list = list.filter((i) => i.engagement.assignedCount === 0);
-    else if (assignmentFilter === "assigned") list = list.filter((i) => i.engagement.assignedCount > 0);
-    else if (assignmentFilter === "partially-assigned") list = list.filter((i) => i.engagement.assignedCount > 0 && followUpCount(i) > 0);
-
-    /* Advanced filters */
-    if (createdWindow !== "all") {
-      const max = createdWindow === "7d" ? 7 : createdWindow === "30d" ? 30 : 90;
-      list = list.filter((i) => daysSince(i.createdOn) <= max);
-    }
-    if (createdVia !== "all") list = list.filter((i) => i.createdVia === createdVia);
-    if (engBand !== "all") list = list.filter((i) => engagementBand(i.engagement.completionRate, i.engagement.assignedCount) === engBand);
-    if (stageFilter !== "all") list = list.filter((i) => i.advisoryStage === stageFilter);
-    if (audienceFilter !== "all") list = list.filter((i) => i.audience.includes(audienceFilter));
 
     /* Search */
     if (search.trim()) {
@@ -301,12 +252,10 @@ export default function ContentStudioPage() {
       );
     }
 
-    const sorted = [...list];
-    if (sort === "most-assigned") sorted.sort((a, b) => b.engagement.assignedCount - a.engagement.assignedCount);
-    else if (sort === "most-engaged") sorted.sort((a, b) => (b.engagement.completionRate ?? -1) - (a.engagement.completionRate ?? -1));
-    else sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    /* Most recently updated first. */
+    const sorted = [...list].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return sorted;
-  }, [items, tab, statusTab, typeFilter, topicFilter, assignmentFilter, createdWindow, createdVia, engBand, stageFilter, audienceFilter, search, sort]);
+  }, [items, tab, topicFilter, search]);
 
   /* ── Mutations ── */
   const logAudit = useCallback((entry: Omit<AuditEntry, "id" | "timestamp">) => {
@@ -381,6 +330,33 @@ export default function ContentStudioPage() {
       compliance: { ...it.compliance, status: "not-reviewed", approvedBy: undefined, approvedAt: undefined },
     }));
     logAudit({ action: "approval-removed", itemName: item?.title ?? "Content", actor: "advisor", detail: "Edited — approval removed, back to Draft" });
+  }
+
+  /* ── Moving a card between board columns ──
+     Every move changes approval, so it is checked, confirmed and logged.
+     Expiry follows the review-by date, so nothing can be dragged into Expired. */
+  const [pendingMove, setPendingMove] = useState<{ item: ContentItem; to: ColumnId } | null>(null);
+
+  function canMove(item: ContentItem, to: ColumnId): MoveCheck {
+    const from = columnOf(item);
+    if (from === to) return { ok: false, reason: "Already here." };
+    if (to === "active") return { ok: false, reason: "Content becomes Active when a client starts it. It can't be moved here." };
+    if (from === "active" && to === "ready") return { ok: false, reason: "Content moves back on its own once no client is part-way through it." };
+    if (to === "expired") return { ok: false, reason: "Content expires on its review-by date. It can't be moved here." };
+    if (to === "ready") {
+      if (from === "expired") return { ok: false, reason: "Expired content needs a fresh review before it can be approved." };
+      const n = blockingOpenCount(item);
+      if (n > 0) return { ok: false, reason: `${n} blocking flag${n === 1 ? "" : "s"} must be fixed before this can be approved.` };
+    }
+    return { ok: true };
+  }
+
+  function confirmMove() {
+    if (!pendingMove) return;
+    const { item, to } = pendingMove;
+    if (to === "ready") approveForUse(item.id);
+    else removeApproval(item.id);
+    setPendingMove(null);
   }
 
   /** The automatic check. It reads the title and description for outcome promises; the other
@@ -500,17 +476,22 @@ export default function ContentStudioPage() {
   }
 
   /** Opens the Create flow, optionally with a type already picked (audience stays the advisor's call). */
-  function openCreate(type?: ContentTypeKey) {
+  function openCreate(type?: ContentTypeKey, mode: "create" | "upload" = "create", scoped = false) {
+    setCreateScoped(scoped && Boolean(type));
     setCreateType(type ?? null);
     setCreateAudience("clients");
     setCreateIntent(type === "simulation" ? "explore" : "learn");
     setCreateAi(false);
+    setCreateMode(type && canUpload(type) ? mode : "create");
+    setCreateFile(null);
+    setCreateMessage("");
+    setUploadError(null);
     setCreateOpen(true);
   }
 
   /** Starts a Draft. The automatic check runs on save, so the new item arrives already checked
       — and still needs the advisor's approval before it can be sent. */
-  function createDraft(kind: ContentTypeKey, opts: { audience: ContentAudience; intent: ContentIntent; ai: boolean }) {
+  function createDraft(kind: ContentTypeKey, opts: { audience: ContentAudience; intent: ContentIntent; ai: boolean; file?: File | null; text?: string }) {
     const id = `ct-new-${Date.now()}`;
     const base = {
       id,
@@ -542,16 +523,40 @@ export default function ContentStudioPage() {
     else if (kind === "workshop") draft = { ...base, title: "Untitled Workshop", category: "workshop", mode: "online", duration: "—" };
     else draft = { ...base, title: `Untitled ${CONTENT_TYPE_LABEL[kind]}`, category: "learning", format: kind };
 
+    /* An uploaded file names the draft and, for images and video, becomes its preview. The check
+       reads the title and description; the file's own contents are not read, so it is still the
+       advisor's job to review what is inside it. */
+    if (opts.file && kind !== "simulation") {
+      const f = opts.file;
+      const isMedia = f.type.startsWith("image/") || f.type.startsWith("video/");
+      draft = {
+        ...draft,
+        title: f.name.replace(/\.[^.]+$/, "") || draft.title,
+        description: `Uploaded file: ${f.name} (${fileSizeLabel(f.size)}).`,
+        ...(isMedia ? { mediaUrl: URL.createObjectURL(f) } : {}),
+      };
+    }
+
+    /* A written message is the content itself, so the check reads all of it. */
+    if (opts.text && kind === "message") {
+      const oneLine = opts.text.replace(/\s+/g, " ").trim();
+      draft = {
+        ...draft,
+        title: oneLine.length > 60 ? `${oneLine.slice(0, 57)}…` : oneLine,
+        description: opts.file ? `${opts.text}\n\nAttached: ${opts.file.name} (${fileSizeLabel(opts.file.size)}).` : opts.text,
+      };
+    }
+
     draft = { ...draft, compliance: checkedReview(draft) };
     setItems((prev) => [draft, ...prev]);
     logAudit({
       action: "created",
       itemName: draft.title,
       actor: "advisor",
-      detail: `${CONTENT_AUDIENCE_LABEL[opts.audience]} · ${CONTENT_INTENT_LABEL[opts.intent]}${opts.ai ? " · AI-assisted" : ""}`,
+      detail: `${CONTENT_AUDIENCE_LABEL[opts.audience]} · ${CONTENT_INTENT_LABEL[opts.intent]}${opts.ai ? " · AI-assisted" : ""}${opts.file ? ` · Uploaded ${opts.file.name}` : ""}`,
     });
     setCreateOpen(false);
-    setStatusTab("needs-check");
+    setTab(tabOf(draft));
     setSelected(draft);
     setDrawerTab("compliance");
     setDrawerOpen(true);
@@ -566,22 +571,13 @@ export default function ContentStudioPage() {
     });
   }
 
-  /** Header checkbox acts on what's shown, not the whole library. */
-  function toggleAll(ids: string[]) {
-    setCheckedIds((prev) => {
-      const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
-      const next = new Set(prev);
-      for (const id of ids) (allOn ? next.delete(id) : next.add(id));
-      return next;
-    });
-  }
-
   /** Opens the Sequence Builder, seeded with whatever is selected, in table order. */
   function openPathBuilder(seed?: string[]) {
     setBuilderSeed((prev) => ({
       ids: seed ?? visible.filter((i) => checkedIds.has(i.id)).map((i) => i.id),
       nonce: prev.nonce + 1,
     }));
+    setActiveQueueId(null);
     setView("send");
   }
 
@@ -594,6 +590,7 @@ export default function ContentStudioPage() {
 
   /** Sends every item in the sequence, in order, and records the sequence itself. */
   function sendSequence(p: SequenceSendPayload) {
+    const fromQueue = pendingQueue.find((x) => x.id === activeQueueId);
     for (const id of p.contentIds) assign(id, p.clientIds, p.channel, p.note || undefined);
     logAudit({
       action: "assigned",
@@ -601,12 +598,23 @@ export default function ContentStudioPage() {
       actor: "advisor",
       detail: `Learning path of ${p.contentIds.length} item${p.contentIds.length === 1 ? "" : "s"}${p.messages.length ? ` + ${p.messages.length} message${p.messages.length === 1 ? "" : "s"}` : ""} to ${p.clientIds.length} client${p.clientIds.length === 1 ? "" : "s"}${p.note ? ", with a message" : ""}${p.savedAsTemplate ? "; saved as a template" : ""}${p.meeting ? `; follows ${p.meeting.title}, ${p.meeting.date}` : ""}`,
     });
+    if (fromQueue) {
+      resolveQueueItem(fromQueue, {
+        outcome: "sent",
+        detail: `Sent from the composer, ${p.contentIds.length} item${p.contentIds.length === 1 ? "" : "s"}${p.messages.length ? ` + ${p.messages.length} message${p.messages.length === 1 ? "" : "s"}` : ""}`,
+      });
+      setActiveQueueId(null);
+    }
   }
 
   /* ── Review queue decisions ── every one is logged ── */
   const clientNameOf = (id: string) => CLIENTS.find((c) => c.id === id)?.name ?? "Client";
   const resolveQueueItem = (q: ReviewQueueItem, r: Omit<ResolvedSend, "id" | "clientName" | "trigger">) => {
     setPendingQueue((prev) => prev.filter((x) => x.id !== q.id));
+    if (q.id === activeQueueId) {
+      setActiveQueueId(null);
+      setBuilderSeed((prev) => ({ ids: [], nonce: prev.nonce + 1, reset: true }));
+    }
     setResolvedQueue((prev) => [{ id: q.id, clientName: clientNameOf(q.clientId), trigger: q.trigger, ...r }, ...prev]);
   };
 
@@ -640,37 +648,43 @@ export default function ContentStudioPage() {
     resolveQueueItem(q, { outcome: "dismissed", detail: reason || "No reason given" });
   }
 
-  /** Opens the suggestion in the composer, so the advisor can change the content before it goes. */
-  function editQueueItem(q: ReviewQueueItem, message: string) {
+  /** Loads the suggestion into the composer, pre-filled, replacing whatever was on the canvas. */
+  function selectQueueItem(q: ReviewQueueItem) {
     setBuilderSeed((prev) => ({
       ids: q.contentIds,
       nonce: prev.nonce + 1,
+      reset: true,
       title: q.meeting ? `${q.meeting.title} follow-up` : `${SEND_TRIGGER_LABEL[q.trigger]} for ${clientNameOf(q.clientId)}`,
-      note: message,
+      note: q.message,
       clientId: q.clientId,
       meeting: q.meeting,
     }));
-    setView("send");
+    setActiveQueueId(q.id);
+  }
+
+  /** A blank package, not tied to a suggestion. */
+  function newSend() {
+    setBuilderSeed((prev) => ({ ids: [], nonce: prev.nonce + 1, reset: true }));
+    setActiveQueueId(null);
   }
 
   return (
     <AppShell>
       {/* In the Send view (desktop), the page stops scrolling and the builder
           fills the remaining height; its three columns scroll on their own. */}
-      <PageFrame width="full" title="Content Management" description="Approve what goes to clients, assemble post-meeting packages and manage the content library." lockHeight={view === "send"} tabs={
+      <PageFrame width="full" title="Content Management" description="Review suggested sends, compose packages for clients and manage the content library." lockHeight={view === "send"} tabs={
         <Tabs value={view} onValueChange={(v) => setView(v as PageView)} variant="pill">
               <TabsList aria-label="Content Management view">
-                <TabsTrigger value="queue" icon={<Inbox size={16} strokeWidth={1.75} />}>
-                  Review queue
+                <TabsTrigger value="send" icon={<Send size={16} strokeWidth={1.75} />}>
+                  Review &amp; send
                   {pendingQueue.length > 0 && (
                     <span className="ml-1 text-xs font-semibold text-[var(--text-status-warning)] bg-[var(--bg-status-warning-subtle)] px-2 py-0.5 rounded-full tabular-nums">
                       {pendingQueue.length}
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="send" icon={<Send size={16} strokeWidth={1.75} />}>Compose &amp; send</TabsTrigger>
                 <TabsTrigger value="library" icon={<Library size={16} strokeWidth={1.75} />}>
-                  Library
+                  Content
                   {needsCheck > 0 && (
                     <span className="ml-1 text-xs font-semibold text-[var(--text-status-warning)] bg-[var(--bg-status-warning-subtle)] px-2 py-0.5 rounded-full tabular-nums">
                       {needsCheck} need check
@@ -683,31 +697,27 @@ export default function ContentStudioPage() {
             </Tabs>
       } actions={
         <Button variant="primary" size="sm" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate()}>
-              Create Content
-            </Button>
+          Create / Upload Content
+        </Button>
       }>
           {/* ══ Send to clients — the Sequence Builder ══
               Kept mounted (hidden) so a half-built sequence survives a trip
               to the Library. */}
-          {view === "queue" && (
-            <ReviewQueue
-              pending={pendingQueue}
-              resolved={resolvedQueue}
-              items={items}
-              clients={CLIENTS}
-              onApprove={approveQueueItem}
-              onEdit={editQueueItem}
-              onDismiss={dismissQueueItem}
-            />
-          )}
           {view === "marketing" && <MarketingZone items={items} />}
           {view === "log" && <SendLog entries={[...auditLog, ...marketingEvents, ...noteEvents]} />}
 
           <div hidden={view !== "send"} className="xl:flex-1 xl:min-h-0">
-            <SequenceBuilder
+            <SendWorkspace
+              pending={pendingQueue}
+              resolved={resolvedQueue}
               items={items}
               clients={CLIENTS}
+              activeId={activeQueueId}
               seed={builderSeed}
+              onSelect={selectQueueItem}
+              onNew={newSend}
+              onApprove={approveQueueItem}
+              onDismiss={dismissQueueItem}
               onEditSimulation={editSimulation}
               onSend={sendSequence}
             />
@@ -735,64 +745,35 @@ export default function ContentStudioPage() {
               Each type has its own way in. Simulations get the fullest
               treatment because the template → personalise step is the
               part that isn't self-evident. */}
-          {tab === "simulations" && (
-            <div className="flex items-start gap-3 rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-4 py-3.5">
-              <div className="w-9 h-9 rounded-[var(--radius-md)] shrink-0 flex items-center justify-center bg-[var(--bg-brand-subtle)] text-[var(--icon-brand-primary)]">
-                <FlaskConical size={17} strokeWidth={1.75} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Simulation templates</p>
-                <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed max-w-[62ch]">
-                  Build the environment once. Finny then personalises it per client — synced from their goal and your plan recommendation — so
-                  they can move the variables and see whether the plan gets them there.
-                </p>
-                <p className="text-xs text-[var(--text-tertiary)] mt-1.5 tabular-nums">
+          <div className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--border-brand-secondary)] bg-[var(--bg-brand-subtle)] px-5 py-4">
+            <div className="w-10 h-10 rounded-[var(--radius-lg)] shrink-0 flex items-center justify-center bg-[var(--bg-primary)] text-[var(--icon-brand-primary)]">
+              {tab === "simulation" ? <FlaskConical size={18} strokeWidth={1.75} /> : canUpload(tab) ? <Upload size={18} strokeWidth={1.75} /> : <Plus size={18} strokeWidth={2} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{tab === "simulation" ? "Simulation templates" : CONTENT_TYPE_LABEL[tab]}</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed max-w-[70ch]">
+                {tab === "simulation"
+                  ? "Build the environment once. Finny then personalises it per client, synced from their goal and your plan recommendation."
+                  : tab === "workshop"
+                    ? "Online and offline sessions clients can be invited to."
+                    : "Add to a package, or assign to clients and groups."}
+              </p>
+              {tab === "simulation" && (
+                <p className="text-xs text-[var(--text-tertiary)] mt-1 tabular-nums">
                   {simCounts.templates} template{simCounts.templates === 1 ? "" : "s"} · {simCounts.personalized} personalised
                 </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="shrink-0"
-                leadingIcon={<Plus size={14} strokeWidth={2} />}
-                onClick={() => openCreate("simulation")}
-              >
-                Create Template
-              </Button>
+              )}
             </div>
-          )}
-
-          {tab === "learning" && (
-            <div className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-4 py-3">
-              <p className="text-xs text-[var(--text-tertiary)]">Videos, courses, PDFs and image posts you can assign to clients or groups.</p>
-              <Button variant="secondary" size="sm" className="shrink-0" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate()}>
-                New Learning Content
-              </Button>
-            </div>
-          )}
-
-          {tab === "workshops" && (
-            <div className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-4 py-3">
-              <p className="text-xs text-[var(--text-tertiary)]">Online and offline sessions clients can be invited to.</p>
-              <Button variant="secondary" size="sm" className="shrink-0" leadingIcon={<Plus size={14} strokeWidth={2} />} onClick={() => openCreate("workshop")}>
-                Create Workshop
-              </Button>
-            </div>
-          )}
-
-          {/* ══ Status tabs ══
-              "Can I send this?" — Approved content is the default view. Counts are live
-              and follow the type selection above. */}
-          <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as LibraryTab)} variant="pill" className="!gap-0">
-            <TabsList aria-label="Content status">
-              {STATUS_TABS.map((t) => (
-                <TabsTrigger key={t.id} value={t.id}>
-                  {t.label}
-                  <span className="ml-1.5 text-xs font-semibold text-[var(--text-tertiary)] tabular-nums">{statusCounts[t.id]}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+            <Button
+              variant="primary"
+              size="md"
+              className="shrink-0"
+              leadingIcon={canUpload(tab) ? <Upload size={16} strokeWidth={2} /> : <Plus size={16} strokeWidth={2} />}
+              onClick={() => openCreate(tab, canUpload(tab) ? "upload" : "create", true)}
+            >
+              {tab === "message" ? "Add content" : canUpload(tab) ? "Upload content" : tab === "simulation" ? "Create template" : "Create content"}
+            </Button>
+          </div>
 
           {/* ══ Filters ══ */}
           <div className="space-y-4">
@@ -807,18 +788,6 @@ export default function ContentStudioPage() {
                 />
               </div>
 
-              <SelectField size="sm" className="w-[148px]" aria-label="Type" value={typeFilter} onValueChange={(v: unknown) => setTypeFilter(v as TypeFilter)} items={TYPE_FILTER_LABEL}>
-                <SelectItem value="all">All types</SelectItem>
-                {CONTENT_TYPE_GROUPS.map((g) => (
-                  <SelectGroup key={g.group}>
-                    <SelectGroupLabel>{g.group}</SelectGroupLabel>
-                    {g.types.map((t) => (
-                      <SelectItem key={t} value={t}>{CONTENT_TYPE_LABEL[t]}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectField>
-
               <SelectField size="sm" className="w-[140px]" aria-label="Topic" value={topicFilter} onValueChange={(v: unknown) => setTopicFilter(v as Topic | "all")} items={{ all: "All topics", ...TOPIC_LABEL }}>
                 <SelectItem value="all">All topics</SelectItem>
                 {(Object.keys(TOPIC_LABEL) as Topic[]).map((t) => (
@@ -826,111 +795,16 @@ export default function ContentStudioPage() {
                 ))}
               </SelectField>
 
-              <SelectField size="sm" className="w-[176px]" aria-label="Assignment" value={assignmentFilter} onValueChange={(v: unknown) => setAssignmentFilter(v as AssignmentFilter)} items={ASSIGNMENT_LABEL}>
-                {(Object.keys(ASSIGNMENT_LABEL) as AssignmentFilter[]).map((a) => (
-                  <SelectItem key={a} value={a}>{ASSIGNMENT_LABEL[a]}</SelectItem>
-                ))}
-              </SelectField>
-
-              <Button
-                variant={moreOpen || activeFilterCount > 0 ? "secondary" : "tertiary"}
-                size="sm"
-                leadingIcon={<SlidersHorizontal size={13} strokeWidth={1.75} />}
-                onClick={() => setMoreOpen((v) => !v)}
-              >
-                More Filters
-                {activeFilterCount > 0 && <span className="ml-1.5 text-xs font-semibold text-[var(--text-brand-primary)]">{activeFilterCount}</span>}
-              </Button>
-
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-[var(--text-tertiary)] whitespace-nowrap">Sort</span>
-                <SelectField size="sm" className="w-[132px]" aria-label="Sort" value={sort} onValueChange={(v: unknown) => setSort(v as SortKey)} items={SORT_LABELS}>
-                  {(Object.keys(SORT_LABELS) as SortKey[]).map((s) => (
-                    <SelectItem key={s} value={s}>{SORT_LABELS[s]}</SelectItem>
-                  ))}
-                </SelectField>
-              </div>
             </div>
 
-            {/* Advanced filters — kept out of the way until asked for */}
-            {moreOpen && (
-              <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5">Created</p>
-                    <SelectField size="sm" aria-label="Created" value={createdWindow} onValueChange={(v: unknown) => setCreatedWindow(v as CreatedWindow)} items={CREATED_WINDOW_LABEL}>
-                      {(Object.keys(CREATED_WINDOW_LABEL) as CreatedWindow[]).map((k) => (
-                        <SelectItem key={k} value={k}>{CREATED_WINDOW_LABEL[k]}</SelectItem>
-                      ))}
-                    </SelectField>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5">Created by</p>
-                    <SelectField size="sm" aria-label="Created by" value={createdVia} onValueChange={(v: unknown) => setCreatedVia(v as CreatedVia | "all")} items={{ all: "Anyone", ...CREATED_VIA_LABEL }}>
-                      <SelectItem value="all">Anyone</SelectItem>
-                      {(Object.keys(CREATED_VIA_LABEL) as CreatedVia[]).map((k) => (
-                        <SelectItem key={k} value={k}>{CREATED_VIA_LABEL[k]}</SelectItem>
-                      ))}
-                    </SelectField>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5">Engagement</p>
-                    <SelectField size="sm" aria-label="Engagement" value={engBand} onValueChange={(v: unknown) => setEngBand(v as EngagementBand | "all")} items={{ all: "Any", ...ENGAGEMENT_BAND_LABEL }}>
-                      <SelectItem value="all">Any</SelectItem>
-                      {(Object.keys(ENGAGEMENT_BAND_LABEL) as EngagementBand[]).map((k) => (
-                        <SelectItem key={k} value={k}>{ENGAGEMENT_BAND_LABEL[k]}</SelectItem>
-                      ))}
-                    </SelectField>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5">Advisory context</p>
-                    <SelectField size="sm" aria-label="Advisory context" value={stageFilter} onValueChange={(v: unknown) => setStageFilter(v as AdvisoryStage | "all")} items={{ all: "Any", ...ADVISORY_STAGE_LABEL }}>
-                      <SelectItem value="all">Any</SelectItem>
-                      {(Object.keys(ADVISORY_STAGE_LABEL) as AdvisoryStage[]).map((k) => (
-                        <SelectItem key={k} value={k}>{ADVISORY_STAGE_LABEL[k]}</SelectItem>
-                      ))}
-                    </SelectField>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5">Audience</p>
-                    <SelectField size="sm" aria-label="Audience" value={audienceFilter} onValueChange={(v: unknown) => setAudienceFilter(v as Audience | "all")} items={{ all: "Any", ...AUDIENCE_LABEL }}>
-                      <SelectItem value="all">Any</SelectItem>
-                      {(Object.keys(AUDIENCE_LABEL) as Audience[]).map((k) => (
-                        <SelectItem key={k} value={k}>{AUDIENCE_LABEL[k]}</SelectItem>
-                      ))}
-                    </SelectField>
-                  </div>
-                </div>
-                {activeFilterCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => { setCreatedWindow("all"); setCreatedVia("all"); setEngBand("all"); setStageFilter("all"); setAudienceFilter("all"); }}
-                    className="mt-3 text-xs font-semibold text-[var(--text-brand-primary)] hover:underline"
-                  >
-                    Clear advanced filters
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* ══ Table ══ */}
           <div>
-            <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-3">
               <p className="text-xs text-[var(--text-tertiary)]">
                 {visible.length} item{visible.length === 1 ? "" : "s"}
               </p>
-              <div className="flex items-center gap-3">
-                {/* Expand — opens the full workspace over the studio */}
-                <button
-                  type="button"
-                  onClick={() => openPathBuilder()}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-brand-primary)] hover:underline"
-                >
-                  <Maximize2 size={12} strokeWidth={2} />
-                  Expand
-                </button>
-              </div>
             </div>
 
             {/* Selection bar — appears only once order could matter */}
@@ -955,22 +829,44 @@ export default function ContentStudioPage() {
               </div>
             )}
 
-            <ContentTable
+            <ContentBoard
               items={visible}
               selectedId={selected?.id ?? null}
               onSelect={(item) => { setSelected(item); setDrawerTab(undefined); setDrawerOpen(true); }}
-              mode={statusTab}
               checkedIds={checkedIds}
               onToggleChecked={toggleChecked}
-              onToggleAll={toggleAll}
               lastSent={lastSent}
+              canMove={canMove}
+              onMove={(item, to) => setPendingMove({ item, to })}
               onSend={(item) => openPathBuilder([item.id])}
               onReview={(item) => { setSelected(item); setDrawerTab("compliance"); setDrawerOpen(true); }}
-              empty={<LibraryEmpty tab={statusTab} filtered={Boolean(search.trim()) || typeFilter !== "all" || topicFilter !== "all" || assignmentFilter !== "all" || activeFilterCount > 0} onGo={setStatusTab} onCreate={() => openCreate()} />}
+              empty={<LibraryEmpty filtered={Boolean(search.trim()) || topicFilter !== "all"} onCreate={() => openCreate()} />}
             />
           </div>
           </>)}
       </PageFrame>
+
+      {/* ══ Confirm a board move ══ */}
+      <Modal open={pendingMove !== null} onOpenChange={(o) => !o && setPendingMove(null)}>
+        <ModalContent className="max-w-[440px]">
+          <div className="px-5 pt-5 pb-4 pr-14">
+            <ModalTitle>{pendingMove?.to === "ready" ? "Approve for use?" : "Send back for review?"}</ModalTitle>
+            <ModalDescription className="mt-1">
+              {pendingMove?.to === "ready"
+                ? `“${pendingMove?.item.title}” will be approved by Anita Sharma and can then be sent to clients. This is logged.`
+                : `“${pendingMove?.item.title}” will lose its approval and go back to Draft. It can't be sent until it is approved again.${pendingMove && activeClientCount(pendingMove.item) > 0 ? ` ${activeClientCount(pendingMove.item)} client${activeClientCount(pendingMove.item) === 1 ? " is" : "s are"} part-way through it.` : ""} This is logged.`}
+            </ModalDescription>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-[var(--border-tertiary)] px-5 py-3">
+            <Button variant="tertiary" size="sm" onClick={() => setPendingMove(null)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" onClick={confirmMove}>
+              {pendingMove?.to === "ready" ? "Approve" : "Send back"}
+            </Button>
+          </div>
+        </ModalContent>
+      </Modal>
 
       {/* ══ Detail drawer ══ */}
       <ContentDetailDrawer
@@ -1000,30 +896,35 @@ export default function ContentStudioPage() {
       <Modal open={createOpen} onOpenChange={setCreateOpen}>
         <ModalContent className="max-w-[520px]">
           <div className="shrink-0 border-b border-[var(--border-tertiary)] px-5 pt-5 pb-4 pr-14">
-            <ModalTitle>Create Content</ModalTitle>
+            <ModalTitle>{createScoped ? (createType === "message" ? "Add content" : canUpload(createType) ? "Upload content" : "Create content") : "Create / Upload Content"}</ModalTitle>
             <ModalDescription className="mt-0.5">
-              Pick who it&apos;s for, then a type. Drafts are checked automatically before they can be sent.
+              {createScoped
+                ? `Choose who it is for${createType === "message" ? ", then write it or add a file" : canUpload(createType) ? ", then add your file" : ""}. It is checked for compliance before it can be sent.`
+                : "Pick who it's for and a type, then create it here or upload a file you made elsewhere. Either way it is checked for compliance before it can be sent."}
             </ModalDescription>
           </div>
 
           <div className="overflow-y-auto pb-2">
             {/* Step 1 — audience decides the rules, so it comes first */}
-            <fieldset className="px-5 pt-4">
+            <fieldset className="px-5 mt-6">
               <legend className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Who is it for?</legend>
               <div role="radiogroup" aria-label="Audience" className="grid grid-cols-3 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] overflow-hidden divide-x divide-[var(--border-tertiary)]">
                 {(Object.keys(CONTENT_AUDIENCE_LABEL) as ContentAudience[]).map((a) => {
                   const on = createAudience === a;
+                  const blocked = createScoped && createType ? typeDisabledReason(createType, a) : null;
                   return (
                     <button
                       key={a}
                       type="button"
                       role="radio"
                       aria-checked={on}
+                      disabled={Boolean(blocked)}
+                      title={blocked ?? undefined}
                       onClick={() => {
                         setCreateAudience(a);
-                        if (createType && typeDisabledReason(createType, a)) setCreateType(null);
+                        if (!createScoped && createType && typeDisabledReason(createType, a)) setCreateType(null);
                       }}
-                      className={cn("px-3 py-2.5 text-left transition-colors", on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]")}
+                      className={cn("px-3 py-2.5 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed", on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]")}
                     >
                       <p className={cn("text-sm font-semibold", on ? "text-[var(--text-brand-primary)]" : "text-[var(--text-primary)]")}>{CONTENT_AUDIENCE_LABEL[a]}</p>
                       <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-snug">{CONTENT_AUDIENCE_HINT[a]}</p>
@@ -1034,6 +935,7 @@ export default function ContentStudioPage() {
             </fieldset>
 
             {/* Step 2 — the one type list; types that don't fit the audience say why */}
+            {!createScoped && (
             <div role="radiogroup" aria-label="Content type">
               {CONTENT_TYPE_GROUPS.map((g) => (
                 <section key={g.group}>
@@ -1053,6 +955,11 @@ export default function ContentStudioPage() {
                             onClick={() => {
                               setCreateType(t);
                               setCreateIntent(t === "simulation" ? "explore" : "learn");
+                              if (!canUpload(t)) {
+                                setCreateMode("create");
+                                setCreateFile(null);
+                                setUploadError(null);
+                              }
                             }}
                           >
                             {CONTENT_TYPE_LABEL[t]}
@@ -1064,10 +971,114 @@ export default function ContentStudioPage() {
                 </section>
               ))}
             </div>
+            )}
 
             {/* Step 3 — settings, once a type is picked */}
             {createType && (
               <div className="px-5 pt-4 space-y-4">
+                {canUpload(createType) && (
+                  <fieldset>
+                    {!createScoped && createType !== "message" && <legend className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">How do you want to add it?</legend>}
+                    {!createScoped && createType !== "message" && <div role="radiogroup" aria-label="Create or upload" className="grid grid-cols-2 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] overflow-hidden divide-x divide-[var(--border-tertiary)]">
+                      {([
+                        { id: "create", title: "Create here", hint: "Start an empty draft" },
+                        { id: "upload", title: "Upload a file", hint: "Made in PowerPoint, Canva or similar" },
+                      ] as const).map((m) => {
+                        const on = createMode === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => setCreateMode(m.id)}
+                            className={cn("px-3 py-2.5 text-left transition-colors", on ? "bg-[var(--bg-brand-subtle)]" : "hover:bg-[var(--bg-secondary)]")}
+                          >
+                            <p className={cn("text-sm font-semibold", on ? "text-[var(--text-brand-primary)]" : "text-[var(--text-primary)]")}>{m.title}</p>
+                            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{m.hint}</p>
+                          </button>
+                        );
+                      })}
+                    </div>}
+
+                    {createType === "message" && (
+                      <Textarea
+                        label="Message"
+                        rows={6}
+                        value={createMessage}
+                        onChange={(e) => setCreateMessage(e.target.value)}
+                        placeholder="Write the message the client will receive"
+                        hint="The compliance check reads this text."
+                      />
+                    )}
+
+                    {(createMode === "upload" || createType === "message") && (
+                      <div className={createScoped && createType !== "message" ? "" : "mt-3"}>
+                        {createType === "message" && <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Or upload a file</p>}
+                        {createFile ? (
+                          <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)] px-3 py-2.5">
+                            <FileUp size={18} strokeWidth={1.75} className="shrink-0 text-[var(--icon-brand-primary)]" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-[var(--text-primary)] truncate">{createFile.name}</p>
+                              <p className="text-xs text-[var(--text-tertiary)]">{fileSizeLabel(createFile.size)}</p>
+                            </div>
+                            <Button variant="tertiary" size="sm" iconOnly aria-label="Remove file" leadingIcon={<XIcon size={14} strokeWidth={2} />} onClick={() => setCreateFile(null)} />
+                          </div>
+                        ) : (
+                          <label
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              setDragOver(true);
+                            }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setDragOver(false);
+                              const f = e.dataTransfer.files?.[0];
+                              if (!f) return;
+                              if (f.size > UPLOAD_MAX_MB * 1048576) setUploadError(`That file is over ${UPLOAD_MAX_MB} MB.`);
+                              else {
+                                setUploadError(null);
+                                setCreateFile(f);
+                              }
+                            }}
+                            className={cn(
+                              "flex flex-col items-center gap-1.5 rounded-[var(--radius-lg)] border border-dashed px-4 py-6 text-center cursor-pointer transition-colors",
+                              "focus-within:ring-2 focus-within:ring-[var(--border-brand-primary)]",
+                              dragOver ? "border-[var(--border-brand-primary)] bg-[var(--bg-brand-subtle)]" : "border-[var(--border-secondary)] hover:bg-[var(--bg-secondary)]"
+                            )}
+                          >
+                            <Upload size={20} strokeWidth={1.75} className="text-[var(--icon-tertiary)]" aria-hidden="true" />
+                            <span className="text-sm font-medium text-[var(--text-primary)]">Drop a file here, or click to browse</span>
+                            <span className="text-xs text-[var(--text-tertiary)]">
+                              {UPLOAD_ACCEPT[createType]?.hint} · up to {UPLOAD_MAX_MB} MB
+                            </span>
+                            <input
+                              type="file"
+                              accept={UPLOAD_ACCEPT[createType]?.accept}
+                              className="sr-only"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                e.target.value = "";
+                                if (!f) return;
+                                if (f.size > UPLOAD_MAX_MB * 1048576) setUploadError(`That file is over ${UPLOAD_MAX_MB} MB.`);
+                                else {
+                                  setUploadError(null);
+                                  setCreateFile(f);
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                        {uploadError && <p role="alert" className="text-xs text-[var(--text-status-error)] mt-1.5">{uploadError}</p>}
+                        <p className="text-xs text-[var(--text-tertiary)] mt-1.5">
+                          The compliance check reads the title and description. It does not read the inside of the file, so review that yourself before approving.
+                        </p>
+                      </div>
+                    )}
+                  </fieldset>
+                )}
+                {!createScoped && (<>
                 <fieldset>
                   <legend className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Content label <span className="text-[var(--text-status-error)]">*</span></legend>
                   <div role="radiogroup" aria-label="Content label" className="grid grid-cols-2 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] overflow-hidden divide-x divide-[var(--border-tertiary)]">
@@ -1095,6 +1106,7 @@ export default function ContentStudioPage() {
                   </Switch>
                   <p className="text-xs text-[var(--text-tertiary)] mt-1">An AI label is added to the item automatically.</p>
                 </div>
+                </>)}
               </div>
             )}
           </div>
@@ -1106,10 +1118,19 @@ export default function ContentStudioPage() {
             <Button
               variant="primary"
               size="sm"
-              disabled={!createType}
-              onClick={() => createType && createDraft(createType, { audience: createAudience, intent: createIntent, ai: createAi })}
+              disabled={!createType || (createType === "message" ? !createMessage.trim() && !createFile : createMode === "upload" && canUpload(createType) && !createFile)}
+              onClick={() =>
+                createType &&
+                createDraft(createType, {
+                  audience: createAudience,
+                  intent: createIntent,
+                  ai: createAi,
+                  file: (createMode === "upload" || createType === "message") && canUpload(createType) ? createFile : null,
+                  text: createType === "message" ? createMessage.trim() : undefined,
+                })
+              }
             >
-              Start draft
+              {createType === "message" ? (createFile ? "Upload & check" : "Save & check") : createMode === "upload" && canUpload(createType) ? "Upload & check" : createScoped ? "Create draft" : "Start draft"}
             </Button>
           </div>
         </ModalContent>
@@ -1126,31 +1147,22 @@ function typeTile(t: ContentTypeKey): { icon: React.ReactNode; className: string
   return { icon: cfg.icon, className: cn(cfg.bgColor, cfg.iconColor) };
 }
 
-/* ─── One empty state per status tab ─── */
-function LibraryEmpty({ tab, filtered, onGo, onCreate }: { tab: LibraryTab; filtered: boolean; onGo: (t: LibraryTab) => void; onCreate: () => void }) {
+/* ─── Empty state for a type with no content ─── */
+function LibraryEmpty({ filtered, onCreate }: { filtered: boolean; onCreate: () => void }) {
   if (filtered) {
     return (
       <>
         <p className="text-sm font-medium text-[var(--text-secondary)]">No content matches these filters</p>
-        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Try a different type, topic or search term.</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Try a different topic or search term.</p>
       </>
     );
   }
-  const copy: Record<LibraryTab, { title: string; action?: { label: string; run: () => void } }> = {
-    ready: { title: "Nothing approved yet. Review your drafts.", action: { label: "Go to Needs check", run: () => onGo("needs-check") } },
-    "needs-check": { title: "Everything is checked." },
-    expired: { title: "No expired content." },
-    all: { title: "No content yet.", action: { label: "Create Content", run: onCreate } },
-  };
-  const c = copy[tab];
   return (
     <>
-      <p className="text-sm font-medium text-[var(--text-secondary)]">{c.title}</p>
-      {c.action && (
-        <Button variant="secondary" size="sm" className="mt-3" onClick={c.action.run}>
-          {c.action.label}
-        </Button>
-      )}
+      <p className="text-sm font-medium text-[var(--text-secondary)]">No content of this type yet.</p>
+      <Button variant="secondary" size="sm" className="mt-3" onClick={onCreate}>
+        Upload / Create Content
+      </Button>
     </>
   );
 }

@@ -22,7 +22,10 @@ export default function RootLayout({
       className={`${GeistSans.variable} h-full antialiased`}
       data-theme="light"
     >
-      <body className="min-h-screen">
+      {/* Browser extensions (ColorZilla adds cz-shortcut-listen, for one) put attributes on <body> before
+          React loads, which React reports as a hydration mismatch. suppressHydrationWarning silences it
+          for this element's own attributes only; it does not affect anything inside the page. */}
+      <body className="min-h-screen" suppressHydrationWarning>
         {children}
       </body>
     </html>

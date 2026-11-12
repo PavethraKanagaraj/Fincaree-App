@@ -12,9 +12,9 @@
    ============================================================ */
 
 import { PIPELINE_LEADS, type PipelineLead, type PipelineStageId } from "@/components/leads/pipeline-data";
-import { TOPIC_LABEL, type Topic } from "./content-data";
+import { CLIENTS, TOPIC_LABEL, type Topic } from "./content-data";
 import type { ContentItem } from "./content-data";
-import { isSendableToLeads, type NurtureSequence } from "./delivery-data";
+import { audienceOf, isSendableToLeads, type NurtureSequence } from "./delivery-data";
 import type { AIInsight } from "@/components/finny/ai-pattern";
 
 /** Had a discovery call, have not subscribed, and are not moving on their own. */
@@ -35,6 +35,20 @@ const GOAL_TOPIC: Record<string, Topic> = {
   "Wealth building": "wealth-creation",
   "Child's education": "child-education",
 };
+
+/** A rough count of who could benefit from a piece of content: people whose stated goals match its
+    topic, taken from the client list and the lead pipeline. Content with no matching goal (general
+    planning, say) is relevant to everyone in its audience. An estimate, not a promise. */
+export function potentialReach(item: ContentItem): { count: number; noun: "clients" | "leads" | "clients and leads" } {
+  const audience = audienceOf(item);
+  const clientsMatching = CLIENTS.filter((c) => c.goals.includes(item.topic)).length;
+  const leadsMatching = PIPELINE_LEADS.filter((l) => (l.goals ?? [l.goal]).some((g) => GOAL_TOPIC[g] === item.topic)).length;
+  const clients = clientsMatching || CLIENTS.length;
+  const leads = leadsMatching || PIPELINE_LEADS.length;
+  if (audience === "clients") return { count: clients, noun: "clients" };
+  if (audience === "leads") return { count: leads, noun: "leads" };
+  return { count: clients + leads, noun: "clients and leads" };
+}
 
 const pct = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
 

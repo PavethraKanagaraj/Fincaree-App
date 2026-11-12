@@ -10,7 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/fincaree/dropdown-menu";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Modal, ModalContent, ModalTitle } from "@/components/ui/modal";
 import {
   Report,
   AIFlag,
@@ -160,16 +160,16 @@ export function ReportDrawer({ report, onClose }: ReportDrawerProps) {
     .filter(({ f }) => DATA_QUALITY_TYPES.includes(f.type));
 
   return (
-    <Sheet
+    <Modal
       open={!!report}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <SheetContent showCloseButton={false} aria-label={`${shown.reportName} — ${shown.client.name}`}>
-        <SheetTitle className="sr-only">
+      <ModalContent showClose={false} aria-label={`${shown.reportName} — ${shown.client.name}`} className="max-w-[760px] h-[min(760px,calc(100vh-4rem))]">
+        <ModalTitle className="sr-only">
           {shown.reportName} — {shown.client.name}
-        </SheetTitle>
+        </ModalTitle>
 
         {/* ── Client Header ── */}
         <div className="px-5 pt-5 pb-4 border-b border-[var(--border-tertiary)] shrink-0">
@@ -482,8 +482,8 @@ export function ReportDrawer({ report, onClose }: ReportDrawerProps) {
             <Button variant="secondary" size="md" onClick={onClose}>Close</Button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </ModalContent>
+    </Modal>
   );
 }
 

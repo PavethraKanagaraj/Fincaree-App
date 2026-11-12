@@ -2,7 +2,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/fincaree/button";
-import { TimelineEvent } from "./engagement-data";
+import { QUERY_KIND_META, TIER_REPLY_TARGET, TimelineEvent } from "./engagement-data";
 
 interface EngagementEventDrawerProps {
   event: TimelineEvent | null;
@@ -10,10 +10,15 @@ interface EngagementEventDrawerProps {
   onOpenChange: (open: boolean) => void;
   added: boolean;
   onAddToMeeting: (id: string) => void;
+  /** The client's plan, which sets the reply target for some kinds of query. */
+  planName?: string;
 }
 
-export function EngagementEventDrawer({ event, open, onOpenChange, added, onAddToMeeting }: EngagementEventDrawerProps) {
+export function EngagementEventDrawer({ event, open, onOpenChange, added, onAddToMeeting, planName }: EngagementEventDrawerProps) {
   if (!event) return null;
+  const kind = event.queryKind ? QUERY_KIND_META[event.queryKind] : null;
+  const urgency =
+    kind === null ? null : kind.urgency === "tier" ? { level: `${planName ?? "Plan"} plan`, target: TIER_REPLY_TARGET[planName ?? ""] ?? "By plan" } : kind.urgency;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -37,6 +42,26 @@ export function EngagementEventDrawer({ event, open, onOpenChange, added, onAddT
 
           {event.detail.body && (
             <p className="text-sm text-[var(--text-primary)] leading-relaxed">{event.detail.body}</p>
+          )}
+
+          {kind && urgency && (
+            <div className="rounded-[var(--radius-lg)] bg-[var(--bg-brand-subtle)] p-3.5 space-y-3">
+              <p className="text-[12px] font-bold text-[var(--text-brand-primary)] uppercase tracking-wider">How to handle · {kind.label}</p>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Comes from</p>
+                <p className="text-sm text-[var(--text-primary)]">{kind.source}</p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">What to do</p>
+                <p className="text-sm text-[var(--text-primary)] leading-relaxed">{kind.handle}</p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Reply target</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {urgency.level} · {urgency.target}
+                </p>
+              </div>
+            </div>
           )}
 
           <div className="space-y-3">

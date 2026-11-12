@@ -109,7 +109,7 @@ export function PipelineBoard({ leads, onOpenLead, onAcceptLead, onDeclineLead, 
                   className="w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold text-white"
                   style={{ backgroundColor: col.accent }}
                 >
-                  {String(i + 1).padStart(2, "0")}
+                  {i + 1}
                 </span>
                 <h2 className="text-base font-bold text-[var(--text-primary)] leading-tight">{col.title}</h2>
                 <span className="ml-auto text-[12px] font-semibold text-[var(--text-tertiary)] bg-[var(--bg-primary)] border border-[var(--border-secondary)] rounded-full px-2 py-0.5">

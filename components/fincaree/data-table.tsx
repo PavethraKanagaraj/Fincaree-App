@@ -74,6 +74,10 @@ export interface DataTableProps<T> {
   toolbarEnd?: (state: { filtered: T[]; isFiltered: boolean }) => React.ReactNode
   /** Drop the outer border and radius, for use inside a panel that already has them. */
   bare?: boolean
+  /** Makes each row open something. The row becomes clickable and reachable by keyboard (Enter). */
+  onRowClick?: (row: T) => void
+  /** With onRowClick: which rows open something. Leave out to make every row clickable. */
+  isRowClickable?: (row: T) => boolean
   /** Accessible name for the table. */
   'aria-label'?: string
   className?: string
@@ -90,6 +94,8 @@ export function DataTable<T>({
   emptyMessage,
   toolbarEnd,
   bare = false,
+  onRowClick,
+  isRowClickable,
   className,
   ...rest
 }: DataTableProps<T>) {
@@ -207,7 +213,26 @@ export function DataTable<T>({
           </TableHeader>
           <TableBody>
             {pageRows.map((row) => (
-              <TableRow key={getRowId(row)}>
+              <TableRow
+                key={getRowId(row)}
+                {...(onRowClick && (!isRowClickable || isRowClickable(row))
+                  ? {
+                      tabIndex: 0,
+                      onClick: () => onRowClick(row),
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault()
+                          onRowClick(row)
+                        }
+                      },
+                    }
+                  : {})}
+                className={cn(
+                  onRowClick &&
+                    (!isRowClickable || isRowClickable(row)) &&
+                    'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] focus-visible:outline-none focus-visible:bg-[var(--bg-secondary)]'
+                )}
+              >
                 {columns.map((c, i) => (
                   <TableCell key={c.id} className={cn(edge(i), c.className)}>
                     {c.cell(row)}

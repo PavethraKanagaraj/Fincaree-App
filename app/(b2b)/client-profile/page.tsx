@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/fincaree/button";
+import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageContainer } from "@/components/layout/PageFrame";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "@/components/fincaree/tabs";
@@ -34,6 +38,15 @@ export default function ClientProfilePage() {
   return (
     <AppShell>
       <PageContainer width="full">
+        <Link href="/clients" className={cn(buttonVariants({ variant: "tertiary", size: "sm" }), "-ml-2 mb-3")}>
+          <span className="fc-btn-content inline-flex items-center justify-center gap-[inherit]">
+            <span className="fc-btn-icon shrink-0" aria-hidden="true">
+              <ArrowLeft size={14} strokeWidth={2} />
+            </span>
+            <span className="fc-btn-label">Back to clients</span>
+          </span>
+        </Link>
+
         <ClientHeader client={clientData} />
 
         {/* Design-system Tabs: trigger padding, the sliding indicator, arrow-key

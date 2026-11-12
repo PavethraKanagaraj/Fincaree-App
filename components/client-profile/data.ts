@@ -260,11 +260,11 @@ export interface StageInfo {
 }
 
 export const ADVISORY_STAGES: StageInfo[] = [
-  { id: "onboarded", number: "01", label: "Onboarded" },
-  { id: "assessment", number: "02", label: "Assessment" },
-  { id: "proposal", number: "03", label: "Proposal" },
-  { id: "plan", number: "04", label: "Plan" },
-  { id: "review", number: "05", label: "Review" },
+  { id: "onboarded", number: "1", label: "Onboarded" },
+  { id: "assessment", number: "2", label: "Assessment" },
+  { id: "proposal", number: "3", label: "Proposal" },
+  { id: "plan", number: "4", label: "Plan" },
+  { id: "review", number: "5", label: "Review" },
 ];
 
 // A real build would compute this from where the client actually is (has an

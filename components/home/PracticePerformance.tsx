@@ -36,10 +36,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Info, Users, IndianRupee, Database, ShieldCheck, TrendingUp, CalendarRange } from "lucide-react";
+import { Activity, Info, Users, IndianRupee, Database, ShieldCheck, TrendingUp, CalendarRange } from "lucide-react";
 import { SelectField, SelectItem } from "@/components/fincaree/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/fincaree/tooltip";
-
+import { CountUp, CountUpText } from "@/components/ui/count-up";
+import { CLIENTS_BY_PLAN } from "./home-data";
 /* ---- Period selector ---- */
 
 type PerformancePeriod = "this-month" | "this-quarter" | "this-year" | "last-quarter" | "last-year" | "custom";
@@ -171,7 +172,7 @@ interface GrowthView {
 
 const GROWTH_BY_PERIOD: Record<Exclude<PerformancePeriod, "custom">, GrowthView> = {
   "this-month": {
-    subtitle: "Active advisory clients, last 4 weeks",
+    subtitle: "Active clients, last 4 weeks",
     points: [
       { label: "Wk 1", clients: 84 },
       { label: "Wk 2", clients: 85 },
@@ -182,7 +183,7 @@ const GROWTH_BY_PERIOD: Record<Exclude<PerformancePeriod, "custom">, GrowthView>
     deltaLabel: "this month",
   },
   "this-quarter": {
-    subtitle: "Active advisory clients, Oct 2025 – Sep 2026",
+    subtitle: "Active clients, Oct 2025 – Sep 2026",
     points: [
       { label: "Oct", clients: 58 },
       { label: "Nov", clients: 61 },
@@ -201,7 +202,7 @@ const GROWTH_BY_PERIOD: Record<Exclude<PerformancePeriod, "custom">, GrowthView>
     deltaLabel: "this quarter",
   },
   "this-year": {
-    subtitle: "Active advisory clients, Jan – Sep 2026",
+    subtitle: "Active clients, Jan – Sep 2026",
     points: [
       { label: "Jan", clients: 66 },
       { label: "Feb", clients: 68 },
@@ -217,7 +218,7 @@ const GROWTH_BY_PERIOD: Record<Exclude<PerformancePeriod, "custom">, GrowthView>
     deltaLabel: "this year",
   },
   "last-quarter": {
-    subtitle: "Active advisory clients, Jul 2025 – Jun 2026",
+    subtitle: "Active clients, Jul 2025 – Jun 2026",
     points: [
       { label: "Jul", clients: 52 },
       { label: "Aug", clients: 55 },
@@ -236,7 +237,7 @@ const GROWTH_BY_PERIOD: Record<Exclude<PerformancePeriod, "custom">, GrowthView>
     deltaLabel: "last quarter",
   },
   "last-year": {
-    subtitle: "Active advisory clients, Jan – Dec 2025",
+    subtitle: "Active clients, Jan – Dec 2025",
     points: [
       { label: "Jan", clients: 40 },
       { label: "Feb", clients: 43 },
@@ -264,9 +265,9 @@ const GROWTH_BY_PERIOD: Record<Exclude<PerformancePeriod, "custom">, GrowthView>
    3 tiers. */
 
 const CLIENT_MIX = [
-  { id: "platinum", label: "Platinum", count: 34, color: "var(--chart-series-01)" },
-  { id: "gold", label: "Gold", count: 36, color: "var(--chart-warning)" },
-  { id: "silver", label: "Silver", count: 16, color: "var(--chart-neutral)" },
+  { id: "platinum", label: "Platinum", count: CLIENTS_BY_PLAN.Platinum, color: "var(--chart-series-01)" },
+  { id: "gold", label: "Gold", count: CLIENTS_BY_PLAN.Gold, color: "var(--chart-warning)" },
+  { id: "silver", label: "Silver", count: CLIENTS_BY_PLAN.Silver, color: "var(--chart-neutral)" },
 ];
 const CLIENT_MIX_TOTAL = CLIENT_MIX.reduce((sum, m) => sum + m.count, 0);
 
@@ -302,6 +303,9 @@ export function PracticePerformance() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-5">
         <div className="flex items-start gap-3">
+          <span className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--bg-brand-subtle)] text-[var(--icon-brand-primary)] flex items-center justify-center shrink-0">
+            <Activity size={18} strokeWidth={1.75} />
+          </span>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold text-[var(--text-primary)]">Practice Performance</span>
@@ -350,10 +354,10 @@ export function PracticePerformance() {
                   </span>
                   <span className="text-sm font-semibold text-[var(--text-primary)] leading-snug">{card.label}</span>
                 </div>
-                <div className="text-2xl font-bold text-[var(--text-primary)] tabular-nums mb-2">{stat.value}</div>
+                <div className="text-2xl font-bold text-[var(--text-primary)] tabular-nums mb-2"><CountUpText text={stat.value} delay={150} /></div>
                 <span className="inline-flex items-center gap-0.5 px-2 h-6 rounded-full bg-[var(--bg-status-success-subtle)] text-xs font-semibold text-[var(--text-status-success)]">
                   <TrendingUp size={11} strokeWidth={2.25} />
-                  {stat.trend}%
+                  <CountUp value={stat.trend} delay={300} />%
                 </span>
                 <div className="text-xs text-[var(--text-tertiary)] mt-1.5">{metrics.comparisonLabel}</div>
               </div>
@@ -437,12 +441,13 @@ export function PracticePerformance() {
                   </button>
                 }
               />
-              <TooltipContent side="top">Share of active advisory clients by subscription tier.</TooltipContent>
+              <TooltipContent side="top">Share of active clients by subscription tier.</TooltipContent>
             </Tooltip>
           </div>
-          <div className="text-xs text-[var(--text-tertiary)] mt-0.5 mb-2">Based on active advisory clients</div>
+          <div className="text-xs text-[var(--text-tertiary)] mt-0.5 mb-2">Based on active clients</div>
           <div className="flex items-center gap-8">
             <div style={{ width: 200, height: 200 }} className="relative shrink-0">
+              <div className="fc-sweep h-full w-full">
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
@@ -461,8 +466,9 @@ export function PracticePerformance() {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
+              </div>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-xl font-bold text-[var(--text-primary)] tabular-nums leading-none">{CLIENT_MIX_TOTAL}</span>
+                <span className="text-xl font-bold text-[var(--text-primary)] tabular-nums leading-none"><CountUp value={CLIENT_MIX_TOTAL} delay={300} /></span>
                 <span className="text-xs text-[var(--text-tertiary)] mt-0.5">Clients</span>
               </div>
             </div>
@@ -473,7 +479,7 @@ export function PracticePerformance() {
                   <span className="text-sm text-[var(--text-primary)] leading-snug">
                     {m.label}
                     <span className="block text-xs text-[var(--text-tertiary)]">
-                      {m.count} ({CLIENT_MIX_PCT[m.id]}%)
+                      <CountUp value={m.count} delay={400} /> ({CLIENT_MIX_PCT[m.id]}%)
                     </span>
                   </span>
                 </div>

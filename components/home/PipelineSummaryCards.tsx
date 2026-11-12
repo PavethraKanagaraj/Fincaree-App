@@ -13,6 +13,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/fincaree/button";
 import { Users, UserPlus, CalendarClock, MessageCircleQuestion, ListChecks, Sparkles, ArrowRight } from "lucide-react";
+import { CountUp } from "@/components/ui/count-up";
 import { HOME_KPI_CARDS, type HomeKpiCard } from "./home-data";
 
 const ICON: Record<HomeKpiCard["id"], React.ReactNode> = {
@@ -53,10 +54,10 @@ const emphasisConfig = {
   },
 };
 
-function SummaryCard({ id, count, label, detail, cta, href, emphasis }: HomeKpiCard) {
+function SummaryCard({ id, count, label, detail, cta, href, emphasis, index }: HomeKpiCard & { index: number }) {
   const cfg = emphasisConfig[emphasis];
   return (
-    <div className={cn("rounded-[var(--radius-xl)] p-4", "transition-shadow hover:shadow-[var(--shadow-sm)]", cfg.card)}>
+    <div style={{ "--rise-i": index } as React.CSSProperties} className={cn("fc-rise rounded-[var(--radius-xl)] p-4", "transition-shadow hover:shadow-[var(--shadow-sm)]", cfg.card)}>
       {/* Header: icon beside label */}
       <div className="flex items-center gap-2.5 mb-3">
         <span className={cn("w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center shrink-0", cfg.icon)}>
@@ -66,7 +67,7 @@ function SummaryCard({ id, count, label, detail, cta, href, emphasis }: HomeKpiC
       </div>
 
       {/* Value + supporting context */}
-      <div className={cn("text-2xl font-bold leading-none tabular-nums", cfg.count)}>{count}</div>
+      <div className={cn("text-2xl font-bold leading-none tabular-nums", cfg.count)}><CountUp value={count} delay={index * 60} /></div>
       {detail && <div className={cn("text-xs leading-snug mt-1.5", cfg.detail)}>{detail}</div>}
 
       <Link href={href} className={cn(buttonVariants({ variant: "link-grey", size: "sm" }), "text-[12px] font-semibold mt-2.5")}>
@@ -84,8 +85,8 @@ function SummaryCard({ id, count, label, detail, cta, href, emphasis }: HomeKpiC
 export function PipelineSummaryCards() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-      {HOME_KPI_CARDS.map((card) => (
-        <SummaryCard key={card.id} {...card} />
+      {HOME_KPI_CARDS.map((card, i) => (
+        <SummaryCard key={card.id} {...card} index={i} />
       ))}
     </div>
   );

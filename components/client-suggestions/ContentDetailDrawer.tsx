@@ -14,7 +14,7 @@
    ============================================================ */
 
 import { useMemo, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ContentPreviewBody } from "./ContentPreview";
 import { Button } from "@/components/fincaree/button";
 import { Badge } from "@/components/fincaree/badge";
 import { Avatar } from "@/components/fincaree/avatar";
@@ -56,7 +56,6 @@ import {
   Minus,
   CircleDashed,
   ShieldCheck,
-  Eye,
   Pencil,
   MoreHorizontal,
   Users,
@@ -98,8 +97,8 @@ function tabsFor(item: ContentItem): { id: DrawerTab; label: string }[] {
   return [
     { id: "overview", label: "Overview" },
     ...(item.category === "simulation" ? ([{ id: "simulation", label: "Simulation" }] as const) : []),
-    { id: "compliance", label: "Check" },
-    { id: "assignments", label: "Assignments" },
+    { id: "compliance", label: "Compliance" },
+    { id: "assignments", label: "Assigned to" },
     { id: "engagement", label: "Engagement" },
   ];
 }
@@ -117,7 +116,14 @@ function Row({ label, value }: { label: string; value: string }) {
 function OverviewTab({ item, history }: { item: ContentItem; history: AuditEntry[] }) {
   const meta = itemMeta(item);
   return (
-    <div className="space-y-5">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-x-8 gap-y-6">
+      {/* The content itself, open straight away — no Preview click needed */}
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Content</p>
+        <ContentPreviewBody item={item} />
+      </div>
+
+      <div className="min-w-0 space-y-5">
       <div>
         <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Content Information</p>
         <div>
@@ -136,20 +142,6 @@ function OverviewTab({ item, history }: { item: ContentItem; history: AuditEntry
         <div className="flex flex-wrap gap-1.5">
           {item.intendedFor.map((a) => (
             <Badge key={a} size="sm" color="gray-blue">{a}</Badge>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Description</p>
-        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{item.description}</p>
-      </div>
-
-      <div>
-        <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Tags</p>
-        <div className="flex flex-wrap gap-1.5">
-          {item.tags.map((t) => (
-            <Badge key={t} size="sm" color="gray">{t}</Badge>
           ))}
         </div>
       </div>
@@ -179,6 +171,7 @@ function OverviewTab({ item, history }: { item: ContentItem; history: AuditEntry
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -188,6 +181,21 @@ function OverviewTab({ item, history }: { item: ContentItem; history: AuditEntry
    advisor review; it never approves. Blocking flags stop Approve, advisory
    flags don't, and an advisory flag can be overridden with a reason (logged).
    ─────────────────────────────────────────────────────────────────────── */
+function SummaryFact({ label, value, mono, danger }: { label: string; value?: string; mono?: boolean; danger?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--text-tertiary)]">{label}</dt>
+      <dd
+        className={cn("mt-0.5 text-sm font-medium truncate", mono && "font-mono text-[13px]", !value && "text-[var(--text-tertiary)] font-normal")}
+        style={danger && value ? { color: "var(--content-status-expired-text)" } : value ? { color: "var(--text-primary)" } : undefined}
+        title={value}
+      >
+        {value || "—"}
+      </dd>
+    </div>
+  );
+}
+
 function CheckStateRow({ label, state }: { label: string; state: "pass" | "flag" | "confirm" | "unchecked" | "na" }) {
   const icon =
     state === "pass" ? (
@@ -263,31 +271,36 @@ function CheckPanel({
 
   return (
     <div className="space-y-5">
-      {/* Status + run again */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
+      {/* Compliance summary: the status, then the facts a reviewer looks for. */}
+      <section aria-label="Compliance summary" className="rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <StatusChip status={status} />
-            <span className="text-xs text-[var(--text-tertiary)]">
-              {checked ? `Checked${review.checkedAt ? ` on ${review.checkedAt}` : ""}` : "Not checked yet"}
+            <span className="text-sm text-[var(--text-secondary)] truncate">
+              {checked ? "Compliance check complete" : "Not checked yet"}
             </span>
           </div>
-          {review.ref && <p className="text-xs font-mono text-[var(--text-tertiary)] mt-1.5">{review.ref}</p>}
-          {status === "approved" && (
-            <p className="text-xs text-[var(--text-secondary)] mt-1.5">
-              Approved by {review.approvedBy} · {review.approvedAt} · until {reviewByLabel(item)}
-            </p>
-          )}
-          {status === "expired" && (
-            <p className="text-xs mt-1.5" style={{ color: "var(--content-status-expired-text)" }}>
-              Expired on {reviewByLabel(item)}. Run the check and approve again to renew it.
-            </p>
-          )}
+          <Button variant="secondary" size="sm" leadingIcon={<RefreshCw size={13} strokeWidth={1.75} />} onClick={onRunCheck}>
+            Run check again
+          </Button>
         </div>
-        <Button variant="secondary" size="sm" leadingIcon={<RefreshCw size={13} strokeWidth={1.75} />} onClick={onRunCheck}>
-          Run check again
-        </Button>
-      </div>
+
+        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 border-t border-[var(--border-tertiary)] px-4 py-3">
+          <SummaryFact label="Reference" value={review.ref} mono />
+          <SummaryFact label="Checked on" value={checked ? review.checkedAt : undefined} />
+          <SummaryFact
+            label="Approved by"
+            value={status === "approved" || status === "expired" ? [review.approvedBy, review.approvedAt].filter(Boolean).join(" · ") : undefined}
+          />
+          <SummaryFact label={status === "expired" ? "Expired on" : "Valid until"} value={status === "approved" || status === "expired" ? reviewByLabel(item) : undefined} danger={status === "expired"} />
+        </dl>
+
+        {status === "expired" && (
+          <p className="border-t border-[var(--border-tertiary)] px-4 py-2.5 text-xs" style={{ color: "var(--content-status-expired-text)" }}>
+            Run the check and approve again to renew it.
+          </p>
+        )}
+      </section>
 
       {/* Checklist */}
       <div>
@@ -737,16 +750,18 @@ export function ContentDetailDrawer({
   const activeTab: DrawerTab = tabs.some((t) => t.id === tab) ? tab : "overview";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:w-[520px]">
+    <>
+    <Modal open={open} onOpenChange={onOpenChange}>
+      {/* Centred and wide, with a fixed height so switching tabs doesn't resize it. */}
+      <ModalContent className="max-w-[960px] h-[min(760px,calc(100vh-4rem))]">
         {/* Header */}
-        <SheetHeader className="border-b border-[var(--border-tertiary)] pb-4">
+        <header className="shrink-0 border-b border-[var(--border-tertiary)] px-5 pt-5 pb-4">
           <div className="flex items-start gap-3 pr-8">
             <div className={cn("w-11 h-11 rounded-[var(--radius-lg)] shrink-0 flex items-center justify-center", cfg.bgColor, cfg.iconColor)}>
               {cfg.icon}
             </div>
             <div className="min-w-0">
-              <SheetTitle className="truncate text-base">{item.title}</SheetTitle>
+              <ModalTitle className="truncate text-base">{item.title}</ModalTitle>
               <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
                 {typeLabel(item)} · {TOPIC_LABEL[item.topic]}
               </p>
@@ -760,7 +775,6 @@ export function ContentDetailDrawer({
           </div>
 
           <div className="flex items-center gap-2 mt-3">
-            <Button variant="secondary" size="sm" leadingIcon={<Eye size={13} strokeWidth={1.75} />}>Preview</Button>
             <Button
               variant="secondary"
               size="sm"
@@ -775,10 +789,10 @@ export function ContentDetailDrawer({
             </Button>
             <Button variant="tertiary" size="sm" iconOnly leadingIcon={<MoreHorizontal size={15} strokeWidth={2} />} aria-label="More actions" />
           </div>
-        </SheetHeader>
+        </header>
 
         {/* Tabs */}
-        <div className="shrink-0 flex border-b border-[var(--border-tertiary)] px-4">
+        <div className="shrink-0 flex border-b border-[var(--border-tertiary)] px-5">
           {tabs.map((t) => {
             const active = activeTab === t.id;
             return (
@@ -803,7 +817,7 @@ export function ContentDetailDrawer({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5">
           {activeTab === "overview" && <OverviewTab item={item} history={auditLog.filter((e) => e.itemName === item.title)} />}
           {activeTab === "simulation" && item.category === "simulation" && (
             <SimulationStudio key={item.id} item={item} onSaveDefaults={onSaveSimDefaults} onPersonalize={onPersonalizeSim} />
@@ -824,7 +838,8 @@ export function ContentDetailDrawer({
           )}
           {activeTab === "engagement" && <EngagementTab item={item} />}
         </div>
-      </SheetContent>
+      </ModalContent>
+    </Modal>
 
       <Modal open={confirmEdit} onOpenChange={setConfirmEdit}>
         <ModalContent className="max-w-[400px]">
@@ -849,6 +864,6 @@ export function ContentDetailDrawer({
           </div>
         </ModalContent>
       </Modal>
-    </Sheet>
+    </>
   );
 }

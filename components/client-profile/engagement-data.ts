@@ -27,6 +27,59 @@ export interface TimelineEventDetail {
   primaryActionLabel?: string;
 }
 
+/* The four kinds of client query that come out of Fincaree's own activity, each handled differently. */
+export type QueryKind = "workshop-booking" | "workshop-followup" | "simulation" | "learning";
+
+export interface QueryKindMeta {
+  label: string;
+  /** Short name for the filter chip. */
+  chip: string;
+  /** Where the query comes from. */
+  source: string;
+  /** What the advisor should do. */
+  handle: string;
+  /** "tier" means the reply target follows the client's plan; otherwise a fixed target. */
+  urgency: "tier" | { level: string; target: string };
+}
+
+export const QUERY_KIND_META: Record<QueryKind, QueryKindMeta> = {
+  "workshop-booking": {
+    label: "Workshop booking",
+    chip: "Workshop booking",
+    source: "The workshop page, or a message about a workshop",
+    handle: "Mostly self-service: seats, date and joining link. Send an automatic reply with the details, and bring in the advisor only for a special request.",
+    urgency: { level: "Low", target: "Automatic reply the same day" },
+  },
+  "workshop-followup": {
+    label: "After a workshop",
+    chip: "After a workshop",
+    source: "The workshop's attendee list",
+    handle: "Reply with the recording, the slides and answers to the Q&A. Link the workshop so you can see what was covered.",
+    urgency: { level: "Medium", target: "Within 1 to 2 days" },
+  },
+  simulation: {
+    label: "Simulation doubt",
+    chip: "Simulation doubts",
+    source: "The simulation the client ran",
+    handle: "Show the client's own numbers and scenario next to the question. Explain what the model does and does not promise.",
+    urgency: "tier",
+  },
+  learning: {
+    label: "Learning doubt",
+    chip: "Learning doubts",
+    source: "The content item that was sent",
+    handle: "Show which content it was, when it was sent and how far the client got. Suggest the next piece of content.",
+    urgency: "tier",
+  },
+};
+
+/** The reply target for the client's plan, used when a query's urgency follows the tier. */
+export const TIER_REPLY_TARGET: Record<string, string> = {
+  Platinum: "Same day",
+  Gold: "Within 1 day",
+  Silver: "Within 2 days",
+};
+
 export interface TimelineEvent {
   id: string;
   date: string;
@@ -39,6 +92,9 @@ export interface TimelineEvent {
   outcome?: string;
   status?: string;
   relatedLabel?: string;
+  /** For a client query: which kind it is, and the workshop, simulation or content it is about. */
+  queryKind?: QueryKind;
+  queryAbout?: string;
   linkLabel?: string;
   groupedItems?: string[];
   detail: TimelineEventDetail;
@@ -60,7 +116,7 @@ export const TIMELINE_TYPE_LABELS: Record<TimelineEventType, string> = {
 
 /* ---- Timeline events, newest first. "Today" for filtering ≈ 24 Aug 2025 ---- */
 
-export const TIMELINE_EVENTS: TimelineEvent[] = [
+const RAW_TIMELINE_EVENTS: TimelineEvent[] = [
   {
     id: "evt-report-viewed",
     date: "22 Aug 2025",
@@ -363,19 +419,114 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       primaryActionLabel: "View Meeting",
     },
   },
+  {
+    id: "evt-q-learning",
+    date: "21 Aug 2025",
+    dateGroup: "21 AUG 2025",
+    sortDate: "2025-08-21",
+    actor: "client",
+    type: "query",
+    title: "Doubt on content sent",
+    summary: "“In Retirement Basics, what does ‘real return’ mean?”",
+    status: "Answered",
+    queryKind: "learning",
+    queryAbout: "Content: Retirement Basics",
+    linkLabel: "View query",
+    detail: {
+      heading: "CLIENT QUERY",
+      fields: [
+        { label: "Raised", value: "21 Aug 2025" },
+        { label: "Status", value: "Answered" },
+        { label: "About", value: "Content: Retirement Basics" },
+      ],
+      body: "“In Retirement Basics, what does ‘real return’ mean?”",
+      primaryActionLabel: "Reply",
+    },
+  },
+  {
+    id: "evt-q-simulation",
+    date: "19 Aug 2025",
+    dateGroup: "19 AUG 2025",
+    sortDate: "2025-08-19",
+    actor: "client",
+    type: "query",
+    title: "Doubt on a simulation",
+    summary: "“Why does the retire-at-58 scenario show a lower corpus than my plan?”",
+    status: "Pending",
+    queryKind: "simulation",
+    queryAbout: "Simulation: Retirement Readiness",
+    linkLabel: "View query",
+    detail: {
+      heading: "CLIENT QUERY",
+      fields: [
+        { label: "Raised", value: "19 Aug 2025" },
+        { label: "Status", value: "Pending" },
+        { label: "About", value: "Simulation: Retirement Readiness" },
+      ],
+      body: "“Why does the retire-at-58 scenario show a lower corpus than my plan?”",
+      primaryActionLabel: "Reply",
+    },
+  },
+  {
+    id: "evt-q-workshop-after",
+    date: "14 Aug 2025",
+    dateGroup: "14 AUG 2025",
+    sortDate: "2025-08-14",
+    actor: "client",
+    type: "query",
+    title: "Question after a workshop",
+    summary: "“Can I get the slides from the Retirement Planning Workshop?”",
+    status: "Pending",
+    queryKind: "workshop-followup",
+    queryAbout: "Workshop: Retirement Planning Workshop",
+    linkLabel: "View query",
+    detail: {
+      heading: "CLIENT QUERY",
+      fields: [
+        { label: "Raised", value: "14 Aug 2025" },
+        { label: "Status", value: "Pending" },
+        { label: "About", value: "Workshop: Retirement Planning Workshop" },
+      ],
+      body: "“Can I get the slides from the Retirement Planning Workshop?”",
+      primaryActionLabel: "Reply",
+    },
+  },
+  {
+    id: "evt-q-workshop-booking",
+    date: "08 Aug 2025",
+    dateGroup: "08 AUG 2025",
+    sortDate: "2025-08-08",
+    actor: "client",
+    type: "query",
+    title: "Workshop booking query",
+    summary: "“Can I bring my spouse to the Goal Planning Workshop on 4 Oct?”",
+    status: "Answered",
+    queryKind: "workshop-booking",
+    queryAbout: "Workshop: Goal Planning Workshop",
+    linkLabel: "View query",
+    detail: {
+      heading: "CLIENT QUERY",
+      fields: [
+        { label: "Raised", value: "08 Aug 2025" },
+        { label: "Status", value: "Answered" },
+        { label: "About", value: "Workshop: Goal Planning Workshop" },
+      ],
+      body: "“Can I bring my spouse to the Goal Planning Workshop on 4 Oct?”",
+      primaryActionLabel: "Reply",
+    },
+  },
 ];
+
+/** Newest first, whatever order they were written in, so the day groups come out right. */
+export const TIMELINE_EVENTS: TimelineEvent[] = [...RAW_TIMELINE_EVENTS].sort((a, b) => b.sortDate.localeCompare(a.sortDate));
 
 export const TIMELINE_FILTERS: { key: string; label: string; group: "actor" | "type" }[] = [
   { key: "client", label: "Client", group: "actor" },
   { key: "advisor", label: "Advisor", group: "actor" },
   { key: "meeting", label: "Meetings", group: "type" },
-  { key: "learning", label: "Learning", group: "type" },
+  { key: "learning", label: "Learnings", group: "type" },
   { key: "simulation", label: "Simulations", group: "type" },
   { key: "workshop", label: "Workshops", group: "type" },
-  { key: "goal", label: "Goals", group: "type" },
-  { key: "financial", label: "Financial", group: "type" },
-  { key: "query", label: "Queries", group: "type" },
-  { key: "task", label: "Tasks", group: "type" },
 ];
 
 /* ---- Compact orientation strip ---- */

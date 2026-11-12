@@ -1,3 +1,4 @@
+import { Reveal } from "@/components/ui/reveal";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageFrame, PageGrid } from "@/components/layout/PageFrame";
 import { PipelineSummaryCards } from "@/components/home/PipelineSummaryCards";
@@ -34,28 +35,28 @@ export default function HomePage() {
         <PipelineSummaryCards />
 
         {/* ── Practice performance ── */}
-        <PracticePerformance />
+        <Reveal index={4}><PracticePerformance /></Reveal>
 
         {/* ── Today: schedule + work plan ── */}
         <PageGrid>
-          <div className="col-span-12 lg:col-span-6 *:h-full"><TodaysMeetingsList /></div>
-          <div className="col-span-12 lg:col-span-6 *:h-full"><TodaysWorkPlanPreview /></div>
+          <Reveal className="col-span-12 lg:col-span-6 *:h-full"><TodaysMeetingsList /></Reveal>
+          <Reveal index={1} className="col-span-12 lg:col-span-6 *:h-full"><TodaysWorkPlanPreview /></Reveal>
         </PageGrid>
 
         {/* ── Client engagement + client queries ── */}
         <PageGrid>
-          <div className="col-span-12 lg:col-span-6 *:h-full"><ClientEngagementChart /></div>
-          <div className="col-span-12 lg:col-span-6 *:h-full"><ClientQueriesPanel /></div>
+          <Reveal className="col-span-12 lg:col-span-6 *:h-full"><ClientEngagementChart /></Reveal>
+          <Reveal index={1} className="col-span-12 lg:col-span-6 *:h-full"><ClientQueriesPanel /></Reveal>
         </PageGrid>
 
         {/* ── Opportunity funnel + upcoming workshops ── */}
         <PageGrid>
-          <div className="col-span-12 lg:col-span-6 *:h-full"><OpportunityFunnel /></div>
-          <div className="col-span-12 lg:col-span-6 *:h-full"><UpcomingWorkshops /></div>
+          <Reveal className="col-span-12 lg:col-span-6 *:h-full"><OpportunityFunnel /></Reveal>
+          <Reveal index={1} className="col-span-12 lg:col-span-6 *:h-full"><UpcomingWorkshops /></Reveal>
         </PageGrid>
 
         {/* ── Opportunity insights: life events + client signals ── */}
-        <OpportunityInsights />
+        <Reveal><OpportunityInsights /></Reveal>
       </PageFrame>
     </AppShell>
   );

@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { ClientProfileData } from "../client-data";
 import { SelectField, SelectItem } from "@/components/fincaree/select";
 import { EngagementEventDrawer } from "../EngagementEventDrawer";
+import { EngagementHealth } from "../EngagementHealth";
 import {
   Calendar,
   MessageCircle,
@@ -19,22 +20,18 @@ import {
   Search,
   ArrowRight,
   Sparkles,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   X,
 } from "lucide-react";
 import {
   TIMELINE_EVENTS,
   TIMELINE_FILTERS,
   ENGAGEMENT_SUMMARY,
-  OPEN_LOOPS,
   FINNY_ENGAGEMENT_NOTE,
-  ENGAGEMENT_SIGNALS,
   NEXT_MEETING_CONTEXT,
   WORKSHOPS,
   TimelineEvent,
   TimelineEventType,
+  QUERY_KIND_META,
 } from "../engagement-data";
 
 const WORKSHOP_STATUS_LABEL: Record<string, string> = {
@@ -90,52 +87,67 @@ interface EventRowProps {
   onOpen: (e: TimelineEvent) => void;
 }
 
+/** A status word becomes a small pill: amber when something is waiting on someone, grey otherwise. */
+const WAITING = new Set(["pending", "missed", "registered", "awaiting client decision"]);
+
 function EventRow({ event, query, onOpen }: EventRowProps) {
   const Icon = TYPE_ICON[event.type];
-  const actorStyle =
-    event.actor === "client"
-      ? "bg-[var(--bg-brand-subtle)] text-[var(--text-brand-primary)]"
-      : "bg-[var(--bg-secondary)] text-[var(--text-tertiary)]";
+  const waiting = event.status ? WAITING.has(event.status.toLowerCase()) : false;
 
   return (
     <button
       onClick={() => onOpen(event)}
-      className="w-full text-left flex gap-3 py-2.5 pl-0.5 pr-2 rounded-[var(--radius-md)] hover:bg-[var(--bg-secondary)] transition-colors group relative z-10"
+      className={
+        "group relative z-10 flex w-full gap-4 py-4 text-left outline-none " +
+        "before:pointer-events-none before:absolute before:inset-y-1 before:-inset-x-3 before:rounded-[var(--radius-lg)] " +
+        "before:bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] before:opacity-0 before:transition-opacity before:duration-150 " +
+        "hover:before:opacity-100 focus-visible:before:opacity-100 motion-reduce:before:transition-none " +
+        "focus-visible:ring-2 focus-visible:ring-[var(--border-brand-primary)] focus-visible:ring-offset-2"
+      }
     >
-      <div className="flex flex-col items-center pt-0.5 flex-shrink-0">
-        <div className="w-6 h-6 rounded-full bg-[var(--bg-secondary)] group-hover:bg-[var(--bg-tertiary)] flex items-center justify-center transition-colors">
-          <Icon size={12} strokeWidth={2} className="text-[var(--icon-tertiary)]" />
-        </div>
-      </div>
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] text-[var(--icon-tertiary)]">
+        <Icon size={16} strokeWidth={1.75} />
+      </span>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className={`text-[11px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 ${actorStyle}`}>
-            {event.actor}
-          </span>
-          <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{highlight(event.title, query)}</p>
+      <div className="relative min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-semibold leading-snug text-[var(--text-primary)]">{highlight(event.title, query)}</p>
+          {event.status && (
+            <span
+              className={
+                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium " +
+                (waiting ? "bg-[var(--bg-status-warning-subtle)] text-[var(--text-status-warning)]" : "bg-[var(--bg-secondary)] text-[var(--text-secondary)]")
+              }
+            >
+              {event.status}
+            </span>
+          )}
         </div>
 
         {event.groupedItems ? (
-          <ul className="mt-1 space-y-0.5">
+          <ul className="mt-2 space-y-1.5">
             {event.groupedItems.map((item) => (
-              <li key={item} className="text-[13px] text-[var(--text-secondary)] flex items-start gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-[var(--icon-quaternary)] mt-1.5 flex-shrink-0" />
+              <li key={item} className="flex items-start gap-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--icon-quaternary)]" />
                 {highlight(item, query)}
               </li>
             ))}
           </ul>
         ) : (
           <>
-            <p className="text-xs text-[var(--text-secondary)] truncate">{highlight(event.summary, query)}</p>
-            {event.outcome && <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5 truncate">{highlight(event.outcome, query)}</p>}
+            <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{highlight(event.summary, query)}</p>
+            {event.outcome && <p className="mt-1 text-sm leading-relaxed text-[var(--text-tertiary)]">{highlight(event.outcome, query)}</p>}
           </>
         )}
 
-        <div className="flex items-center gap-2.5 mt-1 flex-wrap">
-          {event.status && <span className="text-[12px] text-[var(--text-tertiary)]">{event.status}</span>}
-          {event.relatedLabel && <span className="text-[12px] text-[var(--text-tertiary)]">Related: {event.relatedLabel}</span>}
-          {event.linkLabel && <span className="text-[12px] font-semibold text-[var(--text-brand-primary)]">{event.linkLabel} →</span>}
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[var(--text-tertiary)]">
+          <span className="font-medium capitalize">{event.actor}</span>
+          {event.queryKind && (
+            <span className="rounded-full bg-[var(--bg-brand-subtle)] px-2 py-0.5 font-semibold text-[var(--text-brand-primary)]">{QUERY_KIND_META[event.queryKind].label}</span>
+          )}
+          {event.queryAbout && <span>{event.queryAbout}</span>}
+          {event.relatedLabel && <span>Related: {event.relatedLabel}</span>}
+          {event.linkLabel && <span className="ml-auto font-semibold text-[var(--text-brand-primary)]">{event.linkLabel} →</span>}
         </div>
       </div>
     </button>
@@ -197,6 +209,21 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
     });
   }, [range, activeFilters, query]);
 
+  /* How many events each chip would show: everything inside the chosen range and search, counted by
+     actor or type. It ignores which chips are selected, so a chip's number stays put as you click. */
+  const chipCounts = useMemo(() => {
+    const maxDays = RANGE_DAYS[range];
+    const q = query.trim().toLowerCase();
+    const inScope = TIMELINE_EVENTS.filter((e) => {
+      if (daysAgo(e.sortDate) > maxDays) return false;
+      if (!q) return true;
+      return [e.title, e.summary, e.outcome ?? "", ...(e.groupedItems ?? [])].join(" ").toLowerCase().includes(q);
+    });
+    const counts: Record<string, number> = { all: inScope.length };
+    for (const f of TIMELINE_FILTERS) counts[f.key] = inScope.filter((e) => (f.group === "actor" ? e.actor === f.key : e.type === f.key)).length;
+    return counts;
+  }, [range, query]);
+
   const grouped = useMemo(() => {
     const map = new Map<string, TimelineEvent[]>();
     for (const e of filteredEvents) {
@@ -214,19 +241,10 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
           <h1 className="text-lg font-bold text-[var(--text-primary)]">Engagement</h1>
           <p className="text-sm text-[var(--text-tertiary)] mt-0.5">Follow {firstName}'s relationship between meetings.</p>
         </div>
-        <SelectField
-          size="sm"
-          value={range}
-          onValueChange={(v: unknown) => setRange(v as "7d" | "30d" | "90d")}
-          className="w-[150px]"
-          aria-label="Time range"
-          items={RANGE_LABELS}
-        >
-          {(Object.keys(RANGE_LABELS) as (keyof typeof RANGE_LABELS)[]).map((k) => (
-            <SelectItem key={k} value={k}>{RANGE_LABELS[k]}</SelectItem>
-          ))}
-        </SelectField>
       </div>
+
+      {/* Overall engagement health */}
+      <EngagementHealth client={client} />
 
       {/* 1. Compact engagement summary */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] px-5 py-4">
@@ -236,9 +254,6 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
             { label: "Last Advisor Interaction", value: ENGAGEMENT_SUMMARY.lastAdvisorInteraction },
             { label: "Open Client Actions", value: String(ENGAGEMENT_SUMMARY.openClientActions) },
             { label: "Pending Advisor Actions", value: String(ENGAGEMENT_SUMMARY.pendingAdvisorActions) },
-            { label: "Learning", value: `${ENGAGEMENT_SUMMARY.learningCompleted} completed` },
-            { label: "Simulations", value: `${ENGAGEMENT_SUMMARY.simulationsCompleted} completed` },
-            { label: "Content Viewed", value: String(ENGAGEMENT_SUMMARY.contentViewed) },
             { label: "Next Meeting", value: ENGAGEMENT_SUMMARY.nextMeeting },
           ].map((item, i) => (
             <div key={item.label} className={`flex-1 min-w-[130px] px-4 ${i > 0 ? "border-l border-[var(--border-tertiary)]" : "pl-0"}`}>
@@ -362,6 +377,7 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
             }`}
           >
             All
+            <span className={`ml-1.5 tabular-nums ${activeFilters.size === 0 ? "text-white/80" : "text-[var(--text-secondary)]"}`}>{chipCounts.all}</span>
           </button>
           {TIMELINE_FILTERS.map((f) => (
             <button
@@ -374,22 +390,37 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
               }`}
             >
               {f.label}
+              <span className={`ml-1.5 tabular-nums ${activeFilters.has(f.key) ? "text-white/80" : "text-[var(--text-secondary)]"}`}>{chipCounts[f.key]}</span>
             </button>
           ))}
         </div>
-        <div className="relative w-56">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--icon-tertiary)]" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search activity..."
-            className="w-full text-xs bg-[var(--bg-secondary)] border border-[var(--border-tertiary)] rounded-[var(--radius-md)] pl-8 pr-7 py-1.5 text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-brand-secondary)]"
-          />
-          {query && (
-            <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--icon-tertiary)] hover:text-[var(--icon-primary)]">
-              <X size={12} />
-            </button>
-          )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-64">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--icon-tertiary)]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search activity..."
+              className="w-full text-xs bg-[var(--bg-secondary)] border border-[var(--border-tertiary)] rounded-[var(--radius-md)] pl-8 pr-7 py-1.5 text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-brand-secondary)]"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--icon-tertiary)] hover:text-[var(--icon-primary)]">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <SelectField
+            size="sm"
+            value={range}
+            onValueChange={(v: unknown) => setRange(v as "7d" | "30d" | "90d")}
+            className="w-[200px] shrink-0"
+            aria-label="Time range"
+            items={RANGE_LABELS}
+          >
+            {(Object.keys(RANGE_LABELS) as (keyof typeof RANGE_LABELS)[]).map((k) => (
+              <SelectItem key={k} value={k}>{RANGE_LABELS[k]}</SelectItem>
+            ))}
+          </SelectField>
         </div>
       </div>
 
@@ -405,18 +436,18 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
           {grouped.length === 0 ? (
             <p className="text-sm text-[var(--text-tertiary)] py-8 text-center">No activity matches these filters.</p>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-8">
               {grouped.map(([dateGroup, events]) => (
                 <div key={dateGroup}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-[13px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider whitespace-nowrap">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider whitespace-nowrap">
                       {dateGroup}
                     </span>
                     <div className="h-px flex-1 bg-[var(--border-tertiary)]" />
                   </div>
                   <div className="relative">
-                    <div className="absolute left-[15px] top-2 bottom-2 w-px bg-[var(--border-tertiary)]" />
-                    <div>
+                    <div className="absolute left-[18px] top-6 bottom-6 w-px bg-[var(--border-tertiary)]" />
+                    <div className="divide-y divide-transparent">
                       {events.map((event) => (
                         <EventRow key={event.id} event={event} query={query} onOpen={openDrawer} />
                       ))}
@@ -428,7 +459,7 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
           )}
         </div>
 
-        {/* Sidebar: Finny · Open Loops · Next Meeting */}
+        {/* Sidebar: Finny · Next Meeting */}
         <div className="space-y-4 xl:sticky xl:top-4">
           {/* Finny noticed */}
           {!finnyDismissed && (
@@ -462,57 +493,6 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
             </div>
           )}
 
-          {/* Engagement signals */}
-          <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
-            <h3 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-3">Engagement Signals</h3>
-            <div className="space-y-2">
-              {ENGAGEMENT_SIGNALS.map((s) => {
-                const Icon = s.direction === "up" ? TrendingUp : s.direction === "down" ? TrendingDown : s.direction === "stable" ? Minus : null;
-                const color = s.direction === "up" ? "text-[var(--text-status-success)]" : s.direction === "down" ? "text-[var(--text-status-warning)]" : "text-[var(--text-tertiary)]";
-                return (
-                  <div key={s.label} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-[var(--text-secondary)]">{s.label}</span>
-                    <span className={`text-xs font-semibold flex items-center gap-1 ${color}`}>
-                      {Icon && <Icon size={12} strokeWidth={2} />}
-                      {s.value}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Open loops */}
-          <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
-            <h3 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-3">Open Loops</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Client</p>
-                {OPEN_LOOPS.client.map((item) => (
-                  <div key={item.title} className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-[var(--text-primary)]">{item.title}</p>
-                    {item.due && <span className="text-[13px] text-[var(--text-tertiary)] flex-shrink-0">Due {item.due}</span>}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Advisor</p>
-                {OPEN_LOOPS.advisor.map((item) => (
-                  <div key={item.title} className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-[var(--text-primary)]">{item.title}</p>
-                    {item.due && <span className="text-[13px] text-[var(--text-tertiary)] flex-shrink-0">Due {item.due}</span>}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Pending</p>
-                {OPEN_LOOPS.pending.map((item) => (
-                  <p key={item.title} className="text-xs text-[var(--text-primary)]">{item.title}</p>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* Next meeting */}
           <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
             <h3 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-2">Next Meeting</h3>
@@ -545,6 +525,7 @@ export function EngagementTab({ client }: { client: ClientProfileData }) {
         onOpenChange={setDrawerOpen}
         added={selectedEvent ? !!addedContext[selectedEvent.id] : false}
         onAddToMeeting={handleAdd}
+        planName={client.plan.name}
       />
     </div>
   );

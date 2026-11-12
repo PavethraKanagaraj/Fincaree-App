@@ -35,14 +35,14 @@ export interface PipelineStageInfo {
 }
 
 export const PIPELINE_STAGES: PipelineStageInfo[] = [
-  { id: "suggested", number: "01", title: "Suggested", type: "inbound", typeLabel: "New from Fincaree", typeIcon: Sparkles, subtitle: "Matched to you by Fincaree, not yet booked", accent: "var(--color-blue-600)" },
-  { id: "invited", number: "02", title: "Invited", type: "client-action", typeLabel: "Client Action", typeIcon: Send, subtitle: "Invited by you, waiting for them to join", accent: "var(--color-blue-400)" },
-  { id: "discovery-call", number: "03", title: "Discovery Call", type: "touchpoint", typeLabel: "Advisor Touchpoint", typeIcon: Compass, subtitle: "Booked, or being scheduled, with clients", accent: "var(--bg-brand-primary)" },
-  { id: "awaiting-details", number: "04", title: "Awaiting Client Details", type: "client-action", typeLabel: "Client Action", typeIcon: HandCoins, subtitle: "Waiting for financial information", accent: "var(--color-grey-500)" },
-  { id: "needs-followup", number: "05", title: "Needs Follow-up", type: "attention", typeLabel: "Needs Attention", typeIcon: AlertTriangle, subtitle: "No details received within buffer time", accent: "var(--color-warning-700)" },
-  { id: "ready-for-advice", number: "06", title: "Ready for Advice", type: "ready", typeLabel: "Ready", typeIcon: CheckCircle2, subtitle: "Sufficient data to create a personalised plan", accent: "var(--color-success-700)" },
-  { id: "plan-discussion", number: "07", title: "Plan Discussion", type: "touchpoint", typeLabel: "Advisor Touchpoint", typeIcon: MessageCircle, subtitle: "Financial Blueprint meetings", accent: "var(--bg-brand-primary)" },
-  { id: "decision-pending", number: "08", title: "Decision Pending", type: "decision", typeLabel: "Decision", typeIcon: HandCoins, subtitle: "Plan shared, client considering", accent: "var(--color-error-500)" },
+  { id: "suggested", number: "1", title: "Suggested", type: "inbound", typeLabel: "New from Fincaree", typeIcon: Sparkles, subtitle: "Matched to you by Fincaree, not yet booked", accent: "var(--color-blue-600)" },
+  { id: "invited", number: "2", title: "Invited", type: "client-action", typeLabel: "Client Action", typeIcon: Send, subtitle: "Invited by you, waiting for them to join", accent: "var(--color-blue-400)" },
+  { id: "discovery-call", number: "3", title: "Discovery Call", type: "touchpoint", typeLabel: "Advisor Touchpoint", typeIcon: Compass, subtitle: "Booked, or being scheduled, with clients", accent: "var(--bg-brand-primary)" },
+  { id: "awaiting-details", number: "4", title: "Awaiting Client Details", type: "client-action", typeLabel: "Client Action", typeIcon: HandCoins, subtitle: "Waiting for financial information", accent: "var(--color-grey-500)" },
+  { id: "needs-followup", number: "5", title: "Needs Follow-up", type: "attention", typeLabel: "Needs Attention", typeIcon: AlertTriangle, subtitle: "No details received within buffer time", accent: "var(--color-warning-700)" },
+  { id: "ready-for-advice", number: "6", title: "Ready for Advice", type: "ready", typeLabel: "Ready", typeIcon: CheckCircle2, subtitle: "Sufficient data to create a personalised plan", accent: "var(--color-success-700)" },
+  { id: "plan-discussion", number: "7", title: "Plan Discussion", type: "touchpoint", typeLabel: "Advisor Touchpoint", typeIcon: MessageCircle, subtitle: "Financial Blueprint meetings", accent: "var(--bg-brand-primary)" },
+  { id: "decision-pending", number: "8", title: "Decision Pending", type: "decision", typeLabel: "Decision", typeIcon: HandCoins, subtitle: "Plan shared, client considering", accent: "var(--color-error-500)" },
 ];
 
 export function pipelineStageIndex(stage: PipelineStageId): number {

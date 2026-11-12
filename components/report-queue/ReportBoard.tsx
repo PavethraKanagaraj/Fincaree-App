@@ -63,6 +63,13 @@ const STATUS_SUBTITLE: Record<ReportStatus, string> = {
   archived: "Closed out — kept for the record",
 };
 
+/* Same tier colours as the dashboard's client mix: Platinum green, Gold amber, Silver grey. */
+function planColor(plan: string): "brand" | "warning" | "gray" {
+  if (plan === "Platinum") return "brand";
+  if (plan === "Gold") return "warning";
+  return "gray";
+}
+
 function initials(name: string): string {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
@@ -118,7 +125,7 @@ function ReportBoardCard({ report, onOpen }: { report: Report; onOpen: () => voi
         </div>
 
         <div>
-          <Badge color="gray-blue" leadingIcon="dot" size="sm">{report.client.plan}</Badge>
+          <Badge color={planColor(report.client.plan)} leadingIcon="dot" size="sm">{report.client.plan}</Badge>
         </div>
       </div>
 
@@ -160,7 +167,7 @@ export function ReportBoard({ reports, onOpenReport }: ReportBoardProps) {
                   className="w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold text-white"
                   style={{ backgroundColor: accent }}
                 >
-                  {String(i + 1).padStart(2, "0")}
+                  {i + 1}
                 </span>
                 <Icon size={14} strokeWidth={1.75} className="shrink-0" style={{ color: accent }} aria-hidden />
                 <h2 className="text-base font-bold text-[var(--text-primary)] leading-tight">{STATUS_LABELS[status]}</h2>

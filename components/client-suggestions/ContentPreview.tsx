@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/fincaree/badge";
 import { Tag } from "@/components/fincaree/tag";
 import { Modal, ModalContent, ModalDescription, ModalTitle } from "@/components/ui/modal";
-import { FileText, Play, ShieldCheck } from "lucide-react";
+import { FileText, Play, ShieldCheck, ZoomIn } from "lucide-react";
 import { TOPIC_LABEL, type ContentItem } from "./content-data";
 import { getTypeVisual, itemMeta, typeLabel } from "./content-visual";
 
@@ -22,6 +23,49 @@ import { getTypeVisual, itemMeta, typeLabel } from "./content-visual";
    schedule dialog opens it under the message row);
    `ContentPreviewDialog` is for pages with no panel to put it in.
    ============================================================ */
+
+function ImagePostFrame({ item }: { item: ContentItem }) {
+  /* Hover zoom: the picture scales up around the pointer, inside the frame.
+     Keyboard focus zooms around the centre, so it isn't pointer-only. */
+  const [origin, setOrigin] = useState("50% 50%");
+  const visual = getTypeVisual(item);
+  const src = item.mediaUrl ?? item.posterUrl;
+
+  return (
+    <div
+      role="img"
+      tabIndex={0}
+      aria-label={`${item.title}. Hover to zoom in.`}
+      onMouseMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setOrigin(`${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`);
+      }}
+      onMouseLeave={() => setOrigin("50% 50%")}
+      className="group relative w-full max-w-[320px] aspect-[4/5] rounded-[var(--radius-lg)] overflow-hidden bg-[var(--bg-secondary)] border border-[var(--border-tertiary)] flex items-center justify-center cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-brand-primary)]"
+    >
+      <div
+        style={{ transformOrigin: origin }}
+        className="h-full w-full flex items-center justify-center transition-transform duration-150 ease-out group-hover:scale-[2] group-focus-visible:scale-[2]"
+      >
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className={`w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center ${visual.bgColor} ${visual.iconColor}`} aria-hidden="true">
+            {visual.icon ?? <FileText size={22} />}
+          </span>
+        )}
+      </div>
+      <span className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 text-xs text-[var(--text-tertiary)] transition-opacity group-hover:opacity-0 group-focus-visible:opacity-0">
+        <span>{src ? "" : "Image not attached yet"}</span>
+        <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--bg-primary)] px-2 py-1 font-medium text-[var(--text-secondary)] shadow-[var(--shadow-sm)]">
+          <ZoomIn size={12} strokeWidth={1.75} aria-hidden="true" />
+          Hover to zoom
+        </span>
+      </span>
+    </div>
+  );
+}
 
 function MediaFrame({ item }: { item: ContentItem }) {
   const visual = getTypeVisual(item);
@@ -57,6 +101,11 @@ function MediaFrame({ item }: { item: ContentItem }) {
         <span className="absolute bottom-2 left-2 text-xs text-[var(--text-tertiary)]">Video file not attached yet</span>
       </div>
     );
+  }
+
+  /* Image posts get a tall frame, since the picture is the content. Click to zoom. */
+  if (item.category === "learning" && item.format === "image-post") {
+    return <ImagePostFrame item={item} />;
   }
 
   /* Not a video: show what it is */

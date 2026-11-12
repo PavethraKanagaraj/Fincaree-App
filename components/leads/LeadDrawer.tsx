@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Modal, ModalContent, ModalTitle } from "@/components/ui/modal";
 import { Badge } from "@/components/fincaree/badge";
 import { Button } from "@/components/fincaree/button";
 import { GoalTags } from "./GoalTags";
@@ -63,21 +63,21 @@ export function LeadDrawer({ lead, open, onOpenChange, onScheduleContent }: Lead
   const stage = PIPELINE_STAGES.find((s) => s.id === lead.stage)!;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right">
-        <SheetHeader className="border-b border-[var(--border-tertiary)] pb-4">
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalContent className="max-w-[760px] h-[min(760px,calc(100vh-4rem))]">
+        <header className="shrink-0 border-b border-[var(--border-tertiary)] px-5 pt-5 pb-4">
           <div className="flex items-center gap-3 pr-8">
             <span className="w-10 h-10 rounded-full bg-[var(--bg-brand-subtle)] text-[var(--text-brand-primary)] text-sm font-semibold flex items-center justify-center shrink-0">
               {lead.initials.replace(/[0-9]/g, "")}
             </span>
             <div className="min-w-0">
-              <SheetTitle className="truncate">{lead.name}</SheetTitle>
+              <ModalTitle className="truncate">{lead.name}</ModalTitle>
               <GoalTags lead={lead} />
             </div>
           </div>
-        </SheetHeader>
+        </header>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
           <div>
             <p className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Current Stage</p>
             <Badge color="brand" size="sm">{stage.number} · {stage.title}</Badge>
@@ -140,7 +140,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onScheduleContent }: Lead
           </div>
         </div>
 
-        <SheetFooter className="border-t border-[var(--border-tertiary)]">
+        <div className="shrink-0 flex justify-end border-t border-[var(--border-tertiary)] px-5 py-4">
           <Button
             variant="primary"
             size="md"
@@ -149,8 +149,8 @@ export function LeadDrawer({ lead, open, onOpenChange, onScheduleContent }: Lead
           >
             Open client profile
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </div>
+      </ModalContent>
+    </Modal>
   );
 }

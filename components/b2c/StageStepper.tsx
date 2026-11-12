@@ -35,7 +35,7 @@ export function StageStepper({ activeIndex, completedIndices = [] }: { activeInd
           const reached = active || completedIndices.includes(i);
           const pct = reached ? 100 : 0;
           const route = STAGE_ROUTES[i];
-          const num = String(i + 1).padStart(2, "0");
+          const num = String(i + 1);
 
           const content = (
             <>

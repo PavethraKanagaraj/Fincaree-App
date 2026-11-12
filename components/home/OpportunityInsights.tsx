@@ -19,6 +19,7 @@
    ============================================================ */
 
 import Link from "next/link";
+import { CountUp } from "@/components/ui/count-up";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/fincaree/button";
 import { Badge, type BadgeColor } from "@/components/fincaree/badge";
@@ -46,6 +47,8 @@ interface LifeEvent {
   icon: React.ReactNode;
   badgeBg: string;
   badgeFg: string;
+  /** The event's colour, used for its share of the bar. */
+  color: string;
 }
 
 const LIFE_EVENTS: LifeEvent[] = [
@@ -56,6 +59,7 @@ const LIFE_EVENTS: LifeEvent[] = [
     icon: <Clock size={15} strokeWidth={1.75} />,
     badgeBg: "bg-[var(--bg-status-warning-subtle)]",
     badgeFg: "text-[var(--icon-status-warning)]",
+    color: "var(--icon-status-warning)",
   },
   {
     id: "education",
@@ -64,6 +68,7 @@ const LIFE_EVENTS: LifeEvent[] = [
     icon: <GraduationCap size={15} strokeWidth={1.75} />,
     badgeBg: "bg-[var(--bg-status-success-subtle)]",
     badgeFg: "text-[var(--icon-status-success)]",
+    color: "var(--icon-status-success)",
   },
   {
     id: "home",
@@ -72,6 +77,7 @@ const LIFE_EVENTS: LifeEvent[] = [
     icon: <HomeIcon size={15} strokeWidth={1.75} />,
     badgeBg: "bg-[var(--bg-status-info-subtle)]",
     badgeFg: "text-[var(--icon-status-info)]",
+    color: "var(--icon-status-info)",
   },
   {
     id: "marriage",
@@ -80,6 +86,7 @@ const LIFE_EVENTS: LifeEvent[] = [
     icon: <Heart size={15} strokeWidth={1.75} />,
     badgeBg: "bg-[var(--bg-status-error-subtle)]",
     badgeFg: "text-[var(--icon-status-error)]",
+    color: "var(--icon-status-error)",
   },
   {
     id: "liquidity",
@@ -88,6 +95,7 @@ const LIFE_EVENTS: LifeEvent[] = [
     icon: <Landmark size={15} strokeWidth={1.75} />,
     badgeBg: "bg-[var(--bg-brand-subtle)]",
     badgeFg: "text-[var(--icon-brand-primary)]",
+    color: "var(--icon-brand-primary)",
   },
 ];
 
@@ -164,22 +172,43 @@ const OPPORTUNITY_SIGNALS: OpportunitySignal[] = [
 ];
 
 function ClientLifeEventCard() {
+  const total = LIFE_EVENTS.reduce((sum, e) => sum + e.count, 0);
+  /* Biggest first, so the most common life event leads. */
+  const events = [...LIFE_EVENTS].sort((a, b) => b.count - a.count);
+
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
-      <span className="text-base font-semibold text-[var(--text-primary)]">Client Life Event</span>
-      <div className="divide-y divide-[var(--border-tertiary)] mt-2">
-        {LIFE_EVENTS.map((event) => (
-          <div key={event.id} className="flex items-center gap-3 py-2.5">
-            <span className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", event.badgeBg, event.badgeFg)}>
-              {event.icon}
-            </span>
-            <span className="flex-1 min-w-0 text-sm font-medium text-[var(--text-primary)] truncate">{event.label}</span>
-            <span className="px-2.5 py-1 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-sm font-bold text-[var(--text-primary)] tabular-nums shrink-0">
-              {event.count}
-            </span>
-          </div>
-        ))}
+    <section className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4 flex flex-col">
+      <div>
+        <span className="text-base font-semibold text-[var(--text-primary)]">Client Life Event</span>
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Clients approaching each life stage</p>
       </div>
+
+      {/* Just the numbers: how many clients, and that event's share of all of them. */}
+      <ul className="mt-3 grid flex-1 auto-rows-fr grid-cols-2 gap-3">
+        {events.map((event, i) => {
+          const spansRow = i === events.length - 1 && events.length % 2 === 1;
+          return (
+            <li key={event.id} className={cn(spansRow && "col-span-2")}>
+              <button
+                type="button"
+                className="flex h-full w-full flex-col justify-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] px-4 py-4 text-left transition-colors duration-150 hover:border-[var(--border-secondary)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-brand-primary)] motion-reduce:transition-none"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", event.badgeBg, event.badgeFg)}>{event.icon}</span>
+                  <span className="text-sm font-medium text-[var(--text-secondary)] leading-snug">{event.label}</span>
+                </span>
+                <span className="flex items-baseline gap-2 tabular-nums">
+                  <span className="text-3xl font-bold leading-none text-[var(--text-primary)]"><CountUp value={event.count} delay={250 + i * 70} /></span>
+                  <span className="text-sm text-[var(--text-tertiary)]">clients</span>
+                  <span className="ml-auto rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    {Math.round((event.count / total) * 100)}% of total
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -193,7 +222,7 @@ function ClientSignalsCard() {
         {SIGNAL_STATS.map((stat) => (
           <div key={stat.id} className="rounded-[var(--radius-lg)] border border-[var(--border-tertiary)] p-4">
             <div className="text-3xl font-bold tabular-nums leading-none" style={{ color: stat.color }}>
-              {stat.value}
+              <CountUp value={stat.value} delay={250} />
             </div>
             <div className="text-sm font-semibold text-[var(--text-primary)] mt-2">{stat.label}</div>
             <div className="text-xs text-[var(--text-tertiary)] mt-0.5">{stat.description}</div>
@@ -208,20 +237,33 @@ function ClientSignalsCard() {
 
       <div className="divide-y divide-[var(--border-tertiary)]">
         {OPPORTUNITY_SIGNALS.map((signal) => (
-          <button key={signal.id} type="button" className="flex items-center gap-3 py-3 w-full text-left group">
-            <span className={cn("w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0", signal.badgeBg, signal.badgeFg)}>
+          <button
+            key={signal.id}
+            type="button"
+            className={cn(
+              "group relative flex w-full items-center gap-3 py-3 text-left outline-none",
+              /* The same pale grey wash as the other dashboard cards, on a layer behind the row, so
+                 nothing moves and the dividers stay straight. */
+              "before:pointer-events-none before:absolute before:inset-y-0 before:-inset-x-2 before:rounded-[var(--radius-lg)]",
+              "before:bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] before:opacity-0",
+              "before:transition-opacity before:duration-150 before:ease-out motion-reduce:before:transition-none",
+              "hover:before:opacity-100 focus-visible:before:opacity-100",
+              "focus-visible:ring-2 focus-visible:ring-[var(--border-brand-primary)] focus-visible:ring-offset-2"
+            )}
+          >
+            <span className={cn("relative w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0", signal.badgeBg, signal.badgeFg)}>
               {signal.icon}
             </span>
-            <div className="flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0">
               <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--text-brand-primary)] transition-colors">
                 {signal.title}
               </div>
               <div className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-snug">{signal.description}</div>
             </div>
-            <Badge size="sm" color={signal.pillColor} className="shrink-0">
+            <Badge size="sm" color={signal.pillColor} className="relative shrink-0">
               {signal.clientCount} clients
             </Badge>
-            <ChevronRight size={16} strokeWidth={1.75} className="text-[var(--icon-tertiary)] group-hover:text-[var(--icon-secondary)] transition-colors shrink-0" />
+            <ChevronRight size={16} strokeWidth={1.75} className="relative shrink-0 text-[var(--icon-tertiary)] transition-[transform,color] duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-[var(--icon-brand-primary)] motion-reduce:transition-none motion-reduce:transform-none" />
           </button>
         ))}
       </div>
@@ -231,17 +273,16 @@ function ClientSignalsCard() {
 
 export function OpportunityInsights() {
   return (
-    <div>
-      {/* Section header — not a card, same pattern as Practice Performance's
-         own header sitting above its stat cards. */}
-      <div className="flex items-start justify-between gap-3 mb-3">
+    <section aria-label="Opportunity Insights" className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-5">
+      {/* The parent card: its header, then the two views of the same idea beneath it. */}
+      <div className="flex items-start justify-between gap-3 mb-5">
         <div className="flex items-start gap-3">
           <span className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--bg-status-warning-subtle)] text-[var(--icon-status-warning)] flex items-center justify-center shrink-0">
             <Lightbulb size={18} strokeWidth={1.75} />
           </span>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-base font-semibold text-[var(--text-primary)]">Opportunity Insights</span>
+              <span className="text-lg font-bold text-[var(--text-primary)]">Opportunity Insights</span>
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -255,10 +296,10 @@ export function OpportunityInsights() {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <div className="text-xs text-[var(--text-tertiary)] mt-0.5">Signals across your client relationships</div>
+            <div className="text-sm text-[var(--text-tertiary)] mt-0.5">Signals across your client relationships</div>
           </div>
         </div>
-        <Link href="/client-profile" className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}>
+        <Link href="/clients" className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}>
           <span className="fc-btn-content inline-flex items-center justify-center gap-[inherit]">
             <span className="fc-btn-label">View All</span>
           </span>
@@ -269,6 +310,6 @@ export function OpportunityInsights() {
         <ClientLifeEventCard />
         <ClientSignalsCard />
       </div>
-    </div>
+    </section>
   );
 }

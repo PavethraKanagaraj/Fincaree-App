@@ -20,6 +20,7 @@
 
 import { useState } from "react";
 import { Info } from "lucide-react";
+import { CountUp } from "@/components/ui/count-up";
 import { ButtonGroup } from "@/components/fincaree/button-group";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/fincaree/tooltip";
 import {
@@ -124,7 +125,7 @@ export function ClientEngagementChart() {
       <div className="flex items-stretch divide-x divide-[var(--border-tertiary)] mb-6">
         <div className="pr-5">
           <div className="text-2xl font-bold text-[var(--text-primary)] tabular-nums leading-none">
-            {ENGAGEMENT_TOTAL_CLIENTS}
+            <CountUp value={ENGAGEMENT_TOTAL_CLIENTS} delay={200} />
           </div>
           <div className="text-xs text-[var(--text-tertiary)] mt-1.5">Total clients</div>
         </div>
@@ -135,7 +136,7 @@ export function ClientEngagementChart() {
             <div key={band.key} className="px-5">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: band.color }} aria-hidden="true" />
-                <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums leading-none">{count}</span>
+                <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums leading-none"><CountUp value={count} delay={250} /></span>
                 <span className="text-sm font-semibold" style={{ color: band.color }}>
                   {pct}%
                 </span>
@@ -148,7 +149,7 @@ export function ClientEngagementChart() {
 
       {/* Per-tier 100%-stacked bars */}
       <div className="space-y-3">
-        {data.map((t) => {
+        {data.map((t, rowIndex) => {
           const total = tierTotal(t);
           return (
             <div key={t.tier} className="flex items-center gap-3">
@@ -156,7 +157,7 @@ export function ClientEngagementChart() {
                 <div className="text-sm font-semibold text-[var(--text-primary)] leading-snug">{t.tier}</div>
                 <div className="text-xs text-[var(--text-tertiary)] leading-snug">{total} clients</div>
               </div>
-              <div className="flex-1 h-9 rounded-[var(--radius-md)] overflow-hidden flex">
+              <div className="fc-wipe flex-1 h-9 rounded-[var(--radius-md)] overflow-hidden flex" style={{ ["--rise-i" as string]: rowIndex }}>
                 {bandWidths(t).map(({ band, pct }) => (
                   <div
                     key={band.key}

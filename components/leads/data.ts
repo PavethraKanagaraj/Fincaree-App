@@ -29,14 +29,14 @@ export interface LeadStageInfo {
 }
 
 export const LEAD_STAGES: LeadStageInfo[] = [
-  { id: "discover", number: "01", label: "Discover", completeness: 5 },
-  { id: "quick-profile", number: "02", label: "Quick Profile", completeness: 15 },
-  { id: "snapshot", number: "03", label: "Snapshot", completeness: 25 },
-  { id: "matching", number: "04", label: "Matching", completeness: 30 },
-  { id: "discovery", number: "05", label: "Discovery Call", completeness: 45 },
-  { id: "detailed-data", number: "06", label: "Detailed Data", completeness: 65 },
-  { id: "plan-generated", number: "07", label: "Plan Generated", completeness: 80 },
-  { id: "subscribe", number: "08", label: "Subscribe", completeness: 85 },
+  { id: "discover", number: "1", label: "Discover", completeness: 5 },
+  { id: "quick-profile", number: "2", label: "Quick Profile", completeness: 15 },
+  { id: "snapshot", number: "3", label: "Snapshot", completeness: 25 },
+  { id: "matching", number: "4", label: "Matching", completeness: 30 },
+  { id: "discovery", number: "5", label: "Discovery Call", completeness: 45 },
+  { id: "detailed-data", number: "6", label: "Detailed Data", completeness: 65 },
+  { id: "plan-generated", number: "7", label: "Plan Generated", completeness: 80 },
+  { id: "subscribe", number: "8", label: "Subscribe", completeness: 85 },
 ];
 
 export const CURRENT_LEAD_STAGE: LeadStageId = "snapshot";

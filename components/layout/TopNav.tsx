@@ -41,7 +41,7 @@ export function TopNav() {
       )}
     >
       {/* Search */}
-      <div className="flex-1 min-w-[240px] max-w-[560px]">
+      <div className="flex-1 min-w-[240px] max-w-[720px]">
         <div className="relative">
           <Search
             size={16}
@@ -98,7 +98,7 @@ export function TopNav() {
 
           <DropdownMenuGroup>
             <DropdownMenuGroupLabel>Engagement</DropdownMenuGroupLabel>
-            <DropdownMenuItem icon={<Library size={14} strokeWidth={1.75} />}>Create Content</DropdownMenuItem>
+            <DropdownMenuItem icon={<Library size={14} strokeWidth={1.75} />}>Upload / Create Content</DropdownMenuItem>
             <DropdownMenuItem icon={<Presentation size={14} strokeWidth={1.75} />}>Create Workshop</DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

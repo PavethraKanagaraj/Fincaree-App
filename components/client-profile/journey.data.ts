@@ -28,15 +28,15 @@ export interface JourneyStageInfo {
 }
 
 export const JOURNEY_STAGES: JourneyStageInfo[] = [
-  { id: "discover", number: "01", label: "Discover", profileState: "Lead", completeness: 5 },
-  { id: "quick-profile", number: "02", label: "Quick Profile", profileState: "Prospect", completeness: 15 },
-  { id: "snapshot", number: "03", label: "Financial Snapshot", profileState: "Prospect (enriched)", completeness: 25 },
-  { id: "matching", number: "04", label: "Advisor Matching", profileState: "Matched Prospect", completeness: 30 },
-  { id: "discovery", number: "05", label: "Discovery Call", profileState: "Discovery Profile", completeness: 45 },
-  { id: "share-data", number: "06", label: "Share Detailed Data", profileState: "Verified Client", completeness: 65 },
-  { id: "plan", number: "07", label: "Personalised Plan", profileState: "Advised Client", completeness: 80 },
-  { id: "subscribe", number: "08", label: "Subscribe", profileState: "Active Client", completeness: 85 },
-  { id: "ongoing", number: "09", label: "Ongoing Engagement", profileState: "Actively Managed Client", completeness: 96 },
+  { id: "discover", number: "1", label: "Discover", profileState: "Lead", completeness: 5 },
+  { id: "quick-profile", number: "2", label: "Quick Profile", profileState: "Prospect", completeness: 15 },
+  { id: "snapshot", number: "3", label: "Financial Snapshot", profileState: "Prospect (enriched)", completeness: 25 },
+  { id: "matching", number: "4", label: "Advisor Matching", profileState: "Matched Prospect", completeness: 30 },
+  { id: "discovery", number: "5", label: "Discovery Call", profileState: "Discovery Profile", completeness: 45 },
+  { id: "share-data", number: "6", label: "Share Detailed Data", profileState: "Verified Client", completeness: 65 },
+  { id: "plan", number: "7", label: "Personalised Plan", profileState: "Advised Client", completeness: 80 },
+  { id: "subscribe", number: "8", label: "Subscribe", profileState: "Active Client", completeness: 85 },
+  { id: "ongoing", number: "9", label: "Ongoing Engagement", profileState: "Actively Managed Client", completeness: 96 },
 ];
 
 // Anika has an active Platinum subscription and a completed plan review —

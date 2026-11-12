@@ -70,9 +70,14 @@ export function ActivityTab({ activity, discoveryContext }: { activity: Activity
 
   const thisWeekCount = useMemo(() => activity.filter((a) => daysAgo(a.sortDateTime) <= 7).length, [activity]);
 
-  const categoryCounts = useMemo(() => countBy<ActivityCategory>(filtered, "category"), [filtered]);
+  /* What each category chip would show: everything inside the chosen date range and search, counted by
+     category. It ignores which chip is selected, so a chip's number stays put as you click. */
+  const chipCounts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const inScope = activity.filter((a) => daysAgo(a.sortDateTime) <= RANGE_DAYS[range] && (!q || `${a.title} ${a.description ?? ""}`.toLowerCase().includes(q)));
+    return { all: inScope.length, ...countBy<ActivityCategory>(inScope, "category") } as Record<string, number>;
+  }, [activity, range, query]);
   const actorCounts = useMemo(() => countBy<ActivityActor>(filtered, "actor"), [filtered]);
-  const maxCategoryCount = Math.max(1, ...Object.values(categoryCounts));
   const mostActiveCategory = useMemo(() => {
     const counts = countBy<ActivityCategory>(activity, "category");
     const top = (Object.entries(counts) as [ActivityCategory, number][]).sort((a, b) => b[1] - a[1])[0];
@@ -136,6 +141,7 @@ export function ActivityTab({ activity, discoveryContext }: { activity: Activity
             }`}
           >
             All
+            <span className={`ml-1.5 tabular-nums ${category === "all" ? "text-white/80" : "text-[var(--text-secondary)]"}`}>{chipCounts.all}</span>
           </button>
           {(Object.keys(ACTIVITY_CATEGORY_LABEL) as ActivityCategory[]).map((c) => (
             <button
@@ -146,24 +152,13 @@ export function ActivityTab({ activity, discoveryContext }: { activity: Activity
               }`}
             >
               {ACTIVITY_CATEGORY_LABEL[c]}
+              <span className={`ml-1.5 tabular-nums ${category === c ? "text-white/80" : "text-[var(--text-secondary)]"}`}>{chipCounts[c] ?? 0}</span>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <SelectField
-            size="sm"
-            value={range}
-            onValueChange={(v: unknown) => setRange(v as keyof typeof RANGE_LABELS)}
-            className="w-[140px]"
-            aria-label="Date range"
-            items={RANGE_LABELS}
-          >
-            {(Object.keys(RANGE_LABELS) as (keyof typeof RANGE_LABELS)[]).map((k) => (
-              <SelectItem key={k} value={k}>{RANGE_LABELS[k]}</SelectItem>
-            ))}
-          </SelectField>
-          <div className="relative w-52">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-64">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--icon-tertiary)]" />
             <input
               value={query}
@@ -177,6 +172,18 @@ export function ActivityTab({ activity, discoveryContext }: { activity: Activity
               </button>
             )}
           </div>
+          <SelectField
+            size="sm"
+            value={range}
+            onValueChange={(v: unknown) => setRange(v as keyof typeof RANGE_LABELS)}
+            className="w-[200px] shrink-0"
+            aria-label="Date range"
+            items={RANGE_LABELS}
+          >
+            {(Object.keys(RANGE_LABELS) as (keyof typeof RANGE_LABELS)[]).map((k) => (
+              <SelectItem key={k} value={k}>{RANGE_LABELS[k]}</SelectItem>
+            ))}
+          </SelectField>
         </div>
       </div>
 
@@ -228,30 +235,6 @@ export function ActivityTab({ activity, discoveryContext }: { activity: Activity
 
         {/* Composition sidebar — what the current view is made of */}
         <div className="space-y-4 xl:sticky xl:top-4">
-          <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
-            <h3 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-3">By Category</h3>
-            <div className="space-y-2.5">
-              {(Object.keys(ACTIVITY_CATEGORY_LABEL) as ActivityCategory[]).map((c) => {
-                const count = categoryCounts[c] ?? 0;
-                return (
-                  <button
-                    key={c}
-                    onClick={() => setCategory(c)}
-                    className="w-full text-left group"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">{ACTIVITY_CATEGORY_LABEL[c]}</span>
-                      <span className="text-[12px] font-semibold text-[var(--text-primary)]">{count}</span>
-                    </div>
-                    <div className="h-1 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-                      <div className="h-full rounded-full bg-[var(--bg-brand-primary)]" style={{ width: `${(count / maxCategoryCount) * 100}%` }} />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="rounded-[var(--radius-xl)] border border-[var(--border-tertiary)] bg-[var(--bg-primary)] p-4">
             <h3 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-3">By Actor</h3>
             <div className="space-y-2">

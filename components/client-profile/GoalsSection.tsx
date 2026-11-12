@@ -8,7 +8,7 @@ import { Sparkles, MessageCircle, Search, Plus, Target } from "lucide-react";
 function IndexNumber({ index }: { index: number }) {
   return (
     <span className="text-xs font-semibold text-[var(--text-tertiary)] tabular-nums shrink-0">
-      {String(index + 1).padStart(2, "0")}
+      {index + 1}
     </span>
   );
 }

@@ -13,7 +13,6 @@ import {
   Presentation,
   BarChart3,
   Settings,
-  Sparkles,
   Menu,
 } from "lucide-react";
 import Link from "next/link";
@@ -38,6 +37,8 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   badge?: string;
+  /** Other routes that belong to this item, so it stays highlighted there (a profile belongs to Clients). */
+  alsoActiveOn?: string[];
   /** Reserved for future nested pages — none exist yet. */
   subItems?: { label: string; href: string }[];
 }
@@ -53,7 +54,7 @@ const NEEDS_CHECK = needsCheckCount(seedContentItems(CONTENT_ITEMS));
 export const navItems: NavItem[] = [
   { label: "Dashboard",     href: "/home",               icon: <LayoutDashboard size={18} strokeWidth={1.75} /> },
   { label: "Leads",         href: "/leads",              icon: <UserPlus size={18} strokeWidth={1.75} /> },
-  { label: "Clients",       href: "/client-profile",     icon: <Users size={18} strokeWidth={1.75} /> },
+  { label: "Clients",       href: "/clients",            icon: <Users size={18} strokeWidth={1.75} />, alsoActiveOn: ["/client-profile"] },
   { label: "Meetings",      href: "/meetings",           icon: <Calendar size={18} strokeWidth={1.75} /> },
   { label: "Reports",       href: "/reports",            icon: <FileText size={18} strokeWidth={1.75} /> },
   { label: "Content Management", href: "/content-management", icon: <Library size={18} strokeWidth={1.75} />, badge: NEEDS_CHECK > 0 ? String(NEEDS_CHECK) : undefined },
@@ -119,9 +120,9 @@ export function SideNav() {
   const navRef = useRef<HTMLElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
 
-  function isActive(href: string) {
+  function isActive(href: string, alsoActiveOn: string[] = []) {
     if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    return [href, ...alsoActiveOn].some((h) => pathname.startsWith(h));
   }
 
   /* While expanded: Escape or a click outside the rail collapses it and
@@ -201,7 +202,7 @@ export function SideNav() {
                   href={item.href}
                   label={item.label}
                   icon={item.icon}
-                  active={isActive(item.href)}
+                  active={isActive(item.href, item.alsoActiveOn)}
                   badge={item.badge}
                   expanded={expanded}
                   onNavigate={collapse}
@@ -211,26 +212,8 @@ export function SideNav() {
           </ul>
         </div>
 
-        {/* Bottom: Finny AI + Plan + Settings */}
+        {/* Bottom: Settings */}
         <div className="border-t border-[var(--border-tertiary)] shrink-0 py-3 px-3 flex flex-col gap-0.5">
-          {expanded ? (
-            <div className="flex items-center gap-3 h-10 px-3 rounded-[var(--radius-lg)] bg-[var(--bg-brand-subtle)] border border-[var(--border-brand-secondary)]">
-              <Sparkles size={14} strokeWidth={2} className="text-[var(--icon-brand-primary)] shrink-0" />
-              <span className="text-sm font-medium text-[var(--text-primary)] truncate">Platinum plan</span>
-            </div>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <div className="flex items-center justify-center w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--bg-brand-subtle)] border border-[var(--border-brand-secondary)] cursor-default">
-                    <Sparkles size={14} strokeWidth={2} className="text-[var(--icon-brand-primary)]" />
-                  </div>
-                }
-              />
-              <TooltipContent>Platinum plan — valid till 24 May 2025</TooltipContent>
-            </Tooltip>
-          )}
-
           {expanded ? (
             <Link
               href="/settings"
